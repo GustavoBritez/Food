@@ -157,7 +157,7 @@ export function ListView({ store, sections, actions, preview }: Props) {
           <footer className="mt-12 border-t border-black/[0.06] pt-6 text-center text-[12px] leading-relaxed text-subtle">
             Precios sujetos a modificación por el comercio. No procesamos pagos.
             <br />
-            <span className="font-medium text-black/50">Menú creado con LaCarta</span>
+            <span className="font-medium text-black/50">Menú creado con Carta App</span>
           </footer>
         </main>
       </div>

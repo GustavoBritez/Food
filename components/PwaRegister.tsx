@@ -8,10 +8,10 @@ export function PwaRegister() {
       navigator.serviceWorker
         .register('/sw.js')
         .then((reg) => {
-          console.log('[LaCarta PWA] Service Worker registrado:', reg.scope);
+          console.log('[Carta App PWA] Service Worker registrado:', reg.scope);
         })
         .catch((err) => {
-          console.warn('[LaCarta PWA] Error al registrar Service Worker:', err);
+          console.warn('[Carta App PWA] Error al registrar Service Worker:', err);
         });
     }
   }, []);

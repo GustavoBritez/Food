@@ -70,7 +70,7 @@ export function PwaInstallButton({
     } else {
       // Para navegadores donde ya se puede instalar o mostrar instrucciones
       alert(
-        'Para descargar LaCarta en tu dispositivo:\n\n• En Chrome/Edge: tocá los tres puntos (⋮) o el ícono de instalar en la barra de direcciones y elegí "Instalar aplicación".\n• En celular: elegí "Agregar a la pantalla principal".'
+        'Para descargar Carta App en tu dispositivo:\n\n• En Chrome/Edge: tocá los tres puntos (⋮) o el ícono de instalar en la barra de direcciones y elegí "Instalar aplicación".\n• En celular: elegí "Agregar a la pantalla principal".'
       );
     }
   }
@@ -88,7 +88,7 @@ export function PwaInstallButton({
         type="button"
         onClick={handleInstallClick}
         className={`${baseStyles} ${className}`}
-        title="Descargar LaCarta como aplicación en tu celular o PC"
+        title="Descargar Carta App como aplicación en tu celular o PC"
       >
         <Download className="h-3.5 w-3.5" />
         <span>{label}</span>

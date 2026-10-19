@@ -13,7 +13,7 @@ export function Logo({ className }: { className?: string }) {
         </svg>
       </span>
       <span className="text-[17px] font-bold tracking-tight">
-        LaCarta
+        Carta App
       </span>
     </span>
   );

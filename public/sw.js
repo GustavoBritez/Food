@@ -1,9 +1,9 @@
 /**
- * Service Worker para LaCarta PWA
+ * Service Worker para Carta App PWA
  * Habilita instalación nativa (Add to Home Screen) y caché de recursos clave.
  */
 
-const CACHE_NAME = 'lacarta-v1';
+const CACHE_NAME = 'cartaapp-v1';
 const PRECACHE_URLS = [
   '/',
   '/manifest.webmanifest',

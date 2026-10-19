@@ -36,7 +36,7 @@ function openExternal(url: string) {
 }
 
 export function PublicMenu({ store, categories, products, preview = false }: Props) {
-  const { items, add, clear } = useCart(preview ? null : `lacarta:cart:${store.slug}`);
+  const { items, add, clear } = useCart(preview ? null : `cartaapp:cart:${store.slug}`);
   const [waiterOpen, setWaiterOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 

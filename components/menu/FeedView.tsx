@@ -91,7 +91,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const chipsRef = useRef<HTMLDivElement>(null);
 
-  const { liked, toggle } = useLikes(preview ? null : `lacarta:likes:${store.slug}`);
+  const { liked, toggle } = useLikes(preview ? null : `cartaapp:likes:${store.slug}`);
 
   const totalSlides = slides.length + 1; // +1 por la tarjeta final
   const activeSlide = slides[active];
@@ -459,7 +459,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
           ))}
 
           <footer className="mt-12 border-t border-white/10 pt-6 text-center text-[12px] text-white/50">
-            {DISCLAIMER} · Menú creado con <strong className="text-white">LaCarta</strong>
+            {DISCLAIMER} · Menú creado con <strong className="text-white">Carta App</strong>
           </footer>
         </div>
       </div>
@@ -548,7 +548,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
             <p className="absolute inset-x-0 bottom-5 px-6 text-[11px] leading-relaxed text-white/40">
               {DISCLAIMER}
               <br />
-              Menú creado con <span className="text-white">LaCarta</span>
+              Menú creado con <span className="text-white">Carta App</span>
             </p>
           </section>
         </div>
@@ -764,7 +764,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
         >
           <WhatsAppIcon /> Escribir por WhatsApp al comercio
         </a>
-        <p className="mt-4 text-center text-[11px] text-subtle">{DISCLAIMER} · Menú impulsado por LaCarta</p>
+        <p className="mt-4 text-center text-[11px] text-subtle">{DISCLAIMER} · Menú impulsado por Carta App</p>
       </Sheet>
     </div>
   );

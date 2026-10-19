@@ -1,4 +1,4 @@
-# LaCarta 🍽️📲
+# Carta App 🍽️📲
 
 > **Crea tu menú digital en 2 minutos.**  
 > Tus clientes escanean el QR en la mesa o entran desde Instagram: pueden armar su pedido para **mostrárselo al mozo** en el local o **enviártelo listo por WhatsApp** con un solo toque. Sin comisiones, sin pagos online, sin fricción.

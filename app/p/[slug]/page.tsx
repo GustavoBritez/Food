@@ -59,7 +59,7 @@ const getMenu = cache(async (slug: string) => {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const menu = await getMenu(params.slug);
-  if (!menu) return { title: 'Menú no encontrado · LaCarta' };
+  if (!menu) return { title: 'Menú no encontrado · Carta App' };
   const title = `${menu.store.name} · Menú`;
   const description = `${menu.store.tagline || `Mirá el menú de ${menu.store.name}`} y pedí en la mesa o por WhatsApp.`;
   return {

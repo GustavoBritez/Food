@@ -8,16 +8,16 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   title: {
-    default: 'LaCarta · Tu menú digital en 2 minutos',
-    template: '%s · LaCarta',
+    default: 'Carta App · Tu menú digital en 2 minutos',
+    template: '%s · Carta App',
   },
   description:
-    'Creá el menú digital de tu bar o restaurante en 2 minutos con LaCarta. Tus clientes escanean el QR, le muestran el pedido al mozo o te piden por WhatsApp.',
+    'Creá el menú digital de tu bar o restaurante en 2 minutos con Carta App. Tus clientes escanean el QR, le muestran el pedido al mozo o te piden por WhatsApp.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'LaCarta',
+    title: 'Carta App',
   },
   icons: {
     icon: '/icons/icon-192.png',

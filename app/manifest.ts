@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'LaCarta · Menú Digital',
-    short_name: 'LaCarta',
+    name: 'Carta App · Menú Digital',
+    short_name: 'Carta App',
     description: 'Menú digital interactivo para bares y restaurantes. Pedí en mesa o por WhatsApp.',
     start_url: '/',
     display: 'standalone',

@@ -11,7 +11,7 @@ export const DEMO_STORE: PublicStore = {
   slug: DEMO_SLUG,
   whatsapp: '5491128989237',
   logo_url: null,
-  tagline: 'Cocina casera, burgers y tragos · Demo de LaCarta',
+  tagline: 'Cocina casera, burgers y tragos · Demo de Carta App',
   accent_color: '#22c55e',
   layout: 'feed',
 };
