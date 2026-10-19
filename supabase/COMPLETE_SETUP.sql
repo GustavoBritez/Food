@@ -104,6 +104,22 @@ create index if not exists products_category_order_idx on public.products (categ
 -- 3. FUNCIONES DE SEGURIDAD
 -- =============================================================================
 
+-- Comprueba si el usuario autenticado actual tiene una tienda activa (para Storage)
+create or replace function public.current_user_has_active_store()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.stores s
+    where s.created_by = (select auth.uid())
+      and s.subscription_status in ('active', 'trialing')
+      and (s.current_period_end is null or s.current_period_end > now())
+  );
+$$;
+
 -- Comprueba si el usuario autenticado es dueño del local
 create or replace function public.is_store_owner(sid uuid)
 returns boolean
@@ -135,11 +151,12 @@ as $$
   );
 $$;
 
--- Trigger Anti-Tampering: bloquea mutación de campos de Stripe desde el cliente
+-- Trigger Anti-Tampering: bloquea mutación de campos de Stripe tanto en INSERT como en UPDATE
 create or replace function public.protect_stores_billing_columns()
 returns trigger
 language plpgsql
 security definer
+set search_path = public
 as $$
 declare
   jwt_role text := coalesce(
@@ -149,12 +166,21 @@ declare
   );
 begin
   if jwt_role in ('authenticated', 'anon') then
-    if (NEW.stripe_customer_id is distinct from OLD.stripe_customer_id) or
-       (NEW.stripe_subscription_id is distinct from OLD.stripe_subscription_id) or
-       (NEW.subscription_status is distinct from OLD.subscription_status) or
-       (NEW.current_period_end is distinct from OLD.current_period_end) or
-       (NEW.plan_price_id is distinct from OLD.plan_price_id) then
-      raise exception 'Acceso denegado: No está permitido modificar columnas de facturación directamente.';
+    if TG_OP = 'INSERT' then
+      -- Forzamos que toda tienda creada desde el cliente nazca inactiva y sin datos de Stripe
+      NEW.stripe_customer_id := null;
+      NEW.stripe_subscription_id := null;
+      NEW.subscription_status := 'inactive';
+      NEW.current_period_end := null;
+      NEW.plan_price_id := null;
+    elsif TG_OP = 'UPDATE' then
+      if (NEW.stripe_customer_id is distinct from OLD.stripe_customer_id) or
+         (NEW.stripe_subscription_id is distinct from OLD.stripe_subscription_id) or
+         (NEW.subscription_status is distinct from OLD.subscription_status) or
+         (NEW.current_period_end is distinct from OLD.current_period_end) or
+         (NEW.plan_price_id is distinct from OLD.plan_price_id) then
+        raise exception 'Acceso denegado: No está permitido modificar columnas de facturación directamente.';
+      end if;
     end if;
   end if;
   return NEW;
@@ -163,20 +189,23 @@ $$;
 
 drop trigger if exists tr_protect_stores_billing on public.stores;
 create trigger tr_protect_stores_billing
-  before update on public.stores
+  before insert or update on public.stores
   for each row
   execute function public.protect_stores_billing_columns();
 
 -- =============================================================================
--- 4. ROW LEVEL SECURITY (RLS)
+-- 4. ROW LEVEL SECURITY (RLS) & PRIVACIDAD
 -- =============================================================================
 alter table public.stores                enable row level security;
 alter table public.categories            enable row level security;
 alter table public.products              enable row level security;
 alter table public.stripe_webhook_events enable row level security;
 
+-- Blindaje de privacidad a nivel de columna: anon no puede leer identificadores de Stripe
+revoke select (stripe_customer_id, stripe_subscription_id, plan_price_id) on table public.stores from anon;
+
 -- STORES:
--- Lectura pública para comensales
+-- Lectura pública para comensales (solo columnas no revocadas)
 drop policy if exists "stores: lectura publica" on public.stores;
 create policy "stores: lectura publica" on public.stores
   for select using (true);
@@ -251,12 +280,20 @@ create policy "menus: el dueño lista su carpeta" on storage.objects
 drop policy if exists "menus: el dueño sube a su carpeta" on storage.objects;
 create policy "menus: el dueño sube a su carpeta" on storage.objects
   for insert to authenticated
-  with check (bucket_id = 'menus' and (storage.foldername(name))[1] = (select auth.uid())::text);
+  with check (
+    bucket_id = 'menus'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and public.current_user_has_active_store()
+  );
 
 drop policy if exists "menus: el dueño edita su carpeta" on storage.objects;
 create policy "menus: el dueño edita su carpeta" on storage.objects
   for update to authenticated
-  using (bucket_id = 'menus' and (storage.foldername(name))[1] = (select auth.uid())::text);
+  using (
+    bucket_id = 'menus'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and public.current_user_has_active_store()
+  );
 
 drop policy if exists "menus: el dueño borra su carpeta" on storage.objects;
 create policy "menus: el dueño borra su carpeta" on storage.objects
