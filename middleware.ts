@@ -17,8 +17,8 @@ type CookieToSet = {
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // 1. El webhook de Stripe no usa sesión de usuario ni cookies
-  if (pathname === '/api/stripe/webhook') {
+  // 1. El webhook de Mercado Pago no usa sesión de usuario ni cookies
+  if (pathname === '/api/mercadopago/webhook') {
     return NextResponse.next();
   }
 

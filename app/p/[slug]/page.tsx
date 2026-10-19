@@ -8,7 +8,7 @@ import { DEMO_CATEGORIES, DEMO_PRODUCTS, DEMO_SLUG, DEMO_STORE } from '@/lib/dem
 import { createPublicClient } from '@/lib/supabase/public';
 import type { Category, Product, PublicStore } from '@/lib/types';
 
-// ISR: se sirve cacheado y se regenera cada 60s, o al instante cuando el dueño edita o Stripe cambia el estado (/api/stripe/webhook)
+// ISR: se sirve cacheado y se regenera cada 60s, o al instante cuando el dueño edita o Mercado Pago cambia el estado (/api/mercadopago/webhook)
 export const revalidate = 60;
 
 type Params = { params: { slug: string } };

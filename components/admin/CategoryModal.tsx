@@ -50,7 +50,7 @@ export function CategoryModal({ open, onClose, category, onSave, nextOrder }: Pr
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '';
       if (msg.includes('row-level security') || msg.includes('42501')) {
-        setError('Para guardar categorías necesitás activar tu suscripción Pro ($30 USD/mes) desde el banner superior.');
+        setError('Para guardar categorías necesitás activar tu mes gratis o suscribirte con Mercado Pago desde el banner superior.');
       } else {
         setError(msg || 'Error al guardar la categoría.');
       }

@@ -413,7 +413,7 @@ export function AdminDashboard({
 
       {/* Layout Principal: Dos columnas en Desktop (Gestión + Live Preview) */}
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
-        {/* Banner de Estado de Suscripción / Paywall Stripe */}
+        {/* Banner de Estado de Suscripción / Planes Mercado Pago */}
         <SubscriptionBanner store={store} />
 
         <div className="grid gap-8 lg:grid-cols-12">
@@ -449,7 +449,7 @@ export function AdminDashboard({
                           store.subscription_status === 'active' ||
                           store.subscription_status === 'trialing';
                         if (!isSubscribed) {
-                          alert('Debes activar tu suscripción ($30 USD/mes) para crear categorías.');
+                          alert('Debes activar tu mes gratis o suscribirte con Mercado Pago para crear categorías.');
                           return;
                         }
                         setEditingCategory(null);
@@ -468,7 +468,7 @@ export function AdminDashboard({
                           store.subscription_status === 'active' ||
                           store.subscription_status === 'trialing';
                         if (!isSubscribed) {
-                          alert('Debes activar tu suscripción ($30 USD/mes) para agregar platos.');
+                          alert('Debes activar tu mes gratis o suscribirte con Mercado Pago para agregar platos.');
                           return;
                         }
                         setEditingProduct(null);

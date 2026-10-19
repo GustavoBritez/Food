@@ -32,12 +32,14 @@ export type Store = {
   /** Estilo de color de los botones principales: accent, whatsapp o monochrome */
   button_style?: ButtonStyle;
   created_at?: string;
-  /** Campos de facturación Stripe ($30 USD/mes) */
-  stripe_customer_id?: string | null;
-  stripe_subscription_id?: string | null;
+  /** Campos de facturación Mercado Pago ($50.000 ARS/mes o $500.000 ARS/año, 1 mes gratis) */
+  mp_payment_id?: string | null;
+  mp_preference_id?: string | null;
+  mp_merchant_order_id?: string | null;
+  plan_type?: 'trial' | 'monthly' | 'yearly' | null;
   subscription_status?: SubscriptionStatus;
+  trial_end?: string | null;
   current_period_end?: string | null;
-  plan_price_id?: string | null;
 };
 
 export type Category = {
@@ -76,6 +78,8 @@ export type PublicStore = Pick<
   | 'button_style'
 > & {
   subscription_status?: SubscriptionStatus;
+  plan_type?: 'trial' | 'monthly' | 'yearly' | null;
+  trial_end?: string | null;
   current_period_end?: string | null;
 };
 

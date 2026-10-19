@@ -5,7 +5,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 /**
  * Cliente Supabase Admin con SERVICE_ROLE_KEY.
- * EXCLUSIVO para operaciones backend de servidor (Webhooks de Stripe, tareas de sistema).
+ * EXCLUSIVO para operaciones backend de servidor (Webhooks de Mercado Pago, activación de prueba, tareas de sistema).
  * Este cliente BYPASSEA las políticas RLS y posee permisos totales de lectura y escritura.
  * NUNCA debe ser importado en componentes de cliente ni expuesto en el bundle del navegador.
  */

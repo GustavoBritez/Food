@@ -18,6 +18,7 @@ export const DEMO_STORE: PublicStore = {
   theme: 'dark',
   bg_color: '#0a0a0a',
   button_style: 'accent',
+  plan_type: 'monthly',
   subscription_status: 'active',
   current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
 };

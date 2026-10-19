@@ -32,6 +32,8 @@ export default async function AdminPage({ searchParams }: Props) {
       theme: 'dark',
       bg_color: '#0a0a0a',
       button_style: 'accent',
+      plan_type: 'monthly',
+      subscription_status: 'active',
     };
 
     return (

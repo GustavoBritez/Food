@@ -46,10 +46,13 @@ Para los dueños de bares y restaurantes, es un centro de comando intuitivo para
 
 ---
 
-### 💳 3. Suscripciones y Facturación Automatizada ($30 USD/mes)
-* **Pasarela Oficial de Stripe:** Integración completa con Stripe Subscriptions para el cobro mensual del servicio a los locales gastronómicos.
-* **Portal de Clientes Autónomo (Stripe Customer Portal):** Los dueños de los locales pueden actualizar su tarjeta de crédito o débito, visualizar su historial de pagos y descargar comprobantes y facturas fiscales oficiales de forma 100% autoservicio.
-* **Paywall Inteligente:** Control del estado del servicio (`active`, `past_due`, `canceled`, `inactive`) con avisos claros y bloqueo preventivo de funciones cuando el pago se encuentra vencido.
+### 💳 3. Suscripciones y Facturación Automatizada (Mercado Pago)
+* **Primer Mes Gratuito (30 Días de Prueba):** Activación inmediata en 1 solo clic sin requerir tarjeta de crédito por adelantado.
+* **Planes Flexibles en Moneda Local:**
+  * **Plan Mensual:** $50.000 ARS / mes vía Mercado Pago Checkout Pro.
+  * **Plan Anual:** $500.000 ARS / año (ahorro de $100.000 ARS, equivalente a 2 meses bonificados).
+* **Checkout Pro de Mercado Pago:** Pagos con tarjeta de débito/crédito, dinero en cuenta de Mercado Pago y transferencias inmediatas.
+* **Paywall Inteligente:** Control del estado del servicio (`active`, `trialing`, `past_due`, `canceled`, `inactive`) con avisos claros y bloqueo preventivo de funciones cuando el período ha expirado.
 
 ---
 
@@ -57,8 +60,8 @@ Para los dueños de bares y restaurantes, es un centro de comando intuitivo para
 * **Aislamiento Multi-Tenant con PostgreSQL RLS (Row Level Security):** Cada dueño solo tiene permisos de lectura y escritura sobre los datos y categorías que pertenecen a su local.
 * **Trigger Anti-Tampering:** Función de base de datos a nivel de PostgreSQL que detecta y aborta inmediatamente cualquier intento de modificar los campos de facturación desde el navegador.
 * **RLS Hard-Lock para Catálogo:** Bloqueo a nivel de motor de base de datos que prohíbe la creación o edición de productos si la suscripción del bar no está activa y vigente.
-* **Webhooks Criptográficos e Idempotencia:** Procesamiento de eventos de Stripe con validación obligatoria de firma digital y registro en tabla de deduplicación para prevenir ataques de repetición.
-* **Purga Inmediata de Caché:** Cuando un pago falla o una suscripción es dada de baja, el sistema tumba la versión pública cacheada de la carta en el acto, mostrando una pantalla limpia de local en pausa.
+* **Webhooks con Idempotencia:** Procesamiento de eventos y notificaciones de Mercado Pago con registro en tabla de deduplicación (`mp_webhook_events`) para prevenir repeticiones.
+* **Purga Inmediata de Caché:** Cuando una suscripción expira, el sistema purga la versión pública cacheada de la carta en el acto, mostrando una pantalla limpia de local en pausa.
 * **Acceso Passwordless con Magic Link:** Autenticación moderna mediante enlaces seguros enviados al correo electrónico, protegiendo las cuentas contra ataques de fuerza bruta y evitando olvidos de contraseñas.
 
 ---
@@ -68,6 +71,6 @@ Para los dueños de bares y restaurantes, es un centro de comando intuitivo para
 * **Frontend:** Next.js 14 (App Router), React 18, TailwindCSS, Lucide Icons, Canvas API para compresión WebP.
 * **Backend y Base de Datos:** Supabase (PostgreSQL 15, Row Level Security, Triggers PL/pgSQL, Storage S3-compatible).
 * **Autenticación:** Supabase Auth (Magic Links passwordless con tokens criptográficos PKCE).
-* **Pagos y Facturación:** Stripe API (Stripe Checkout, Webhooks, Customer Portal, Dynamic Payment Methods).
+* **Pagos y Facturación:** Mercado Pago API (Checkout Pro Preferences, IPN Webhooks, Subscriptions/Orders).
 * **Códigos QR:** QRCode React (generación vectorial escalable).
 * **PWA:** Service Workers, Web App Manifest y metaetiquetas para iOS y Android.

@@ -2,7 +2,7 @@
 -- CARTA APP · SETUP COMPLETO UNIFICADO PARA SUPABASE (SQL EDITOR)
 -- =============================================================================
 -- Este archivo contiene la arquitectura completa:
---  1. Estructura de tablas (stores, categories, products, stripe_webhook_events)
+--  1. Estructura de tablas (stores, categories, products, mp_webhook_events)
 --  2. Índices B-Tree optimizados para multi-tenant (+1.000 bares)
 --  3. Trigger Anti-Tampering (blindaje de columnas de facturación)
 --  4. Funciones de verificación de seguridad y suscripción
@@ -39,13 +39,15 @@ create table if not exists public.stores (
   button_style            text not null default 'accent' check (button_style in ('accent', 'whatsapp', 'monochrome')),
   created_by              uuid references auth.users (id) on delete cascade default auth.uid(),
   created_at              timestamptz not null default now(),
-  -- Campos de suscripción y facturación Stripe ($30 USD/mes)
-  stripe_customer_id      text unique,
-  stripe_subscription_id  text unique,
+  -- Campos de suscripción y facturación Mercado Pago ($50.000 ARS/mes o $500.000 ARS/año + 30 días gratis)
   subscription_status     text not null default 'inactive'
     check (subscription_status in ('inactive', 'trialing', 'active', 'past_due', 'canceled', 'unpaid')),
+  plan_type               text check (plan_type in ('trial', 'monthly', 'yearly')),
+  trial_end               timestamptz,
   current_period_end      timestamptz,
-  plan_price_id           text
+  mp_payment_id           text unique,
+  mp_preference_id        text,
+  mp_merchant_order_id    text
 );
 
 -- Asegura las columnas si la tabla ya fue creada previamente
@@ -53,6 +55,11 @@ alter table public.stores add column if not exists cover_url text;
 alter table public.stores add column if not exists theme text not null default 'dark';
 alter table public.stores add column if not exists bg_color text;
 alter table public.stores add column if not exists button_style text not null default 'accent';
+alter table public.stores add column if not exists plan_type text check (plan_type in ('trial', 'monthly', 'yearly'));
+alter table public.stores add column if not exists trial_end timestamptz;
+alter table public.stores add column if not exists mp_payment_id text;
+alter table public.stores add column if not exists mp_preference_id text;
+alter table public.stores add column if not exists mp_merchant_order_id text;
 alter table public.stores drop constraint if exists stores_layout_check;
 alter table public.stores add constraint stores_layout_check check (layout in ('feed', 'list', 'grid'));
 
@@ -95,9 +102,10 @@ create table if not exists public.products (
     on delete cascade
 );
 
--- STRIPE_WEBHOOK_EVENTS: Tabla de idempotencia para webhooks de Stripe
-create table if not exists public.stripe_webhook_events (
+-- MP_WEBHOOK_EVENTS: Tabla de idempotencia para webhooks de Mercado Pago
+create table if not exists public.mp_webhook_events (
   id          text primary key,
+  topic       text,
   created_at  timestamptz not null default now()
 );
 
@@ -105,7 +113,7 @@ create table if not exists public.stripe_webhook_events (
 -- 2. ÍNDICES B-TREE PARA ALTO RENDIMIENTO (+1.000 BARES)
 -- =============================================================================
 create index if not exists stores_created_by_idx on public.stores (created_by);
-create index if not exists stores_stripe_customer_id_idx on public.stores (stripe_customer_id);
+create index if not exists stores_mp_payment_id_idx on public.stores (mp_payment_id);
 create index if not exists stores_subscription_status_idx on public.stores (subscription_status);
 create index if not exists categories_store_id_idx on public.categories (store_id);
 create index if not exists categories_store_order_idx on public.categories (store_id, "order");
@@ -163,7 +171,7 @@ as $$
   );
 $$;
 
--- Trigger Anti-Tampering: bloquea mutación de campos de Stripe tanto en INSERT como en UPDATE
+-- Trigger Anti-Tampering: bloquea mutación de campos de Mercado Pago tanto en INSERT como en UPDATE
 create or replace function public.protect_stores_billing_columns()
 returns trigger
 language plpgsql
@@ -179,18 +187,22 @@ declare
 begin
   if jwt_role in ('authenticated', 'anon') then
     if TG_OP = 'INSERT' then
-      -- Forzamos que toda tienda creada desde el cliente nazca inactiva y sin datos de Stripe
-      NEW.stripe_customer_id := null;
-      NEW.stripe_subscription_id := null;
+      -- Forzamos que toda tienda creada desde el cliente nazca inactiva y sin datos de facturación
       NEW.subscription_status := 'inactive';
+      NEW.plan_type := null;
+      NEW.trial_end := null;
       NEW.current_period_end := null;
-      NEW.plan_price_id := null;
+      NEW.mp_payment_id := null;
+      NEW.mp_preference_id := null;
+      NEW.mp_merchant_order_id := null;
     elsif TG_OP = 'UPDATE' then
-      if (NEW.stripe_customer_id is distinct from OLD.stripe_customer_id) or
-         (NEW.stripe_subscription_id is distinct from OLD.stripe_subscription_id) or
-         (NEW.subscription_status is distinct from OLD.subscription_status) or
+      if (NEW.subscription_status is distinct from OLD.subscription_status) or
+         (NEW.plan_type is distinct from OLD.plan_type) or
+         (NEW.trial_end is distinct from OLD.trial_end) or
          (NEW.current_period_end is distinct from OLD.current_period_end) or
-         (NEW.plan_price_id is distinct from OLD.plan_price_id) then
+         (NEW.mp_payment_id is distinct from OLD.mp_payment_id) or
+         (NEW.mp_preference_id is distinct from OLD.mp_preference_id) or
+         (NEW.mp_merchant_order_id is distinct from OLD.mp_merchant_order_id) then
         raise exception 'Acceso denegado: No está permitido modificar columnas de facturación directamente.';
       end if;
     end if;
@@ -211,10 +223,10 @@ create trigger tr_protect_stores_billing
 alter table public.stores                enable row level security;
 alter table public.categories            enable row level security;
 alter table public.products              enable row level security;
-alter table public.stripe_webhook_events enable row level security;
+alter table public.mp_webhook_events     enable row level security;
 
--- Blindaje de privacidad a nivel de columna: anon no puede leer identificadores de Stripe
-revoke select (stripe_customer_id, stripe_subscription_id, plan_price_id) on table public.stores from anon;
+-- Blindaje de privacidad a nivel de columna: anon no puede leer identificadores de Mercado Pago
+revoke select (mp_payment_id, mp_preference_id, mp_merchant_order_id) on table public.stores from anon;
 
 -- STORES:
 -- Lectura pública para comensales (solo columnas no revocadas)
