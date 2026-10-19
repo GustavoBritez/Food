@@ -268,7 +268,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                 type="button"
                 data-cat={category.id}
                 onClick={() => {
-                  if (desktopMode === 'grid' || store.layout === 'grid') {
+                  if (desktopMode === 'grid') {
                     const el = document.getElementById(`cat-sec-${category.id}`);
                     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   } else {
@@ -310,39 +310,37 @@ export function FeedView({ store, sections, actions, preview }: Props) {
             </button>
 
             {/* Selector de modo en PC (Catálogo Ancho vs Reels) */}
-            {store.layout !== 'grid' && (
-              <div className={cn(
-                'hidden md:flex items-center rounded-full p-0.5 border',
-                isDark ? 'bg-white/10 border-white/15' : 'bg-black/5 border-black/10'
-              )}>
-                <button
-                  type="button"
-                  onClick={() => setDesktopMode('grid')}
-                  className={cn(
-                    'flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-medium transition',
-                    desktopMode === 'grid'
-                      ? (isDark ? 'bg-white text-black shadow-sm font-semibold' : 'bg-neutral-900 text-white shadow-sm font-semibold')
-                      : (isDark ? 'text-white/80 hover:text-white' : 'text-neutral-600 hover:text-neutral-900')
-                  )}
-                  title="Ver catálogo a lo ancho"
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" /> Catálogo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDesktopMode('reels')}
-                  className={cn(
-                    'flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-medium transition',
-                    desktopMode === 'reels'
-                      ? (isDark ? 'bg-white text-black shadow-sm font-semibold' : 'bg-neutral-900 text-white shadow-sm font-semibold')
-                      : (isDark ? 'text-white/80 hover:text-white' : 'text-neutral-600 hover:text-neutral-900')
-                  )}
-                  title="Ver en formato Reels vertical"
-                >
-                  <Film className="h-3.5 w-3.5" /> Reels
-                </button>
-              </div>
-            )}
+            <div className={cn(
+              'hidden md:flex items-center rounded-full p-0.5 border',
+              isDark ? 'bg-white/10 border-white/15' : 'bg-black/5 border-black/10'
+            )}>
+              <button
+                type="button"
+                onClick={() => setDesktopMode('grid')}
+                className={cn(
+                  'flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-medium transition',
+                  desktopMode === 'grid'
+                    ? (isDark ? 'bg-white text-black shadow-sm font-semibold' : 'bg-neutral-900 text-white shadow-sm font-semibold')
+                    : (isDark ? 'text-white/80 hover:text-white' : 'text-neutral-600 hover:text-neutral-900')
+                )}
+                title="Ver catálogo a lo ancho"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" /> Catálogo
+              </button>
+              <button
+                type="button"
+                onClick={() => setDesktopMode('reels')}
+                className={cn(
+                  'flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-medium transition',
+                  desktopMode === 'reels'
+                    ? (isDark ? 'bg-white text-black shadow-sm font-semibold' : 'bg-neutral-900 text-white shadow-sm font-semibold')
+                    : (isDark ? 'text-white/80 hover:text-white' : 'text-neutral-600 hover:text-neutral-900')
+                )}
+                title="Ver en formato Reels vertical"
+              >
+                <Film className="h-3.5 w-3.5" /> Reels
+              </button>
+            </div>
 
             {/* Botón PWA para instalar la app */}
             <PwaInstallButton variant="glass" label="App" className="hidden sm:inline-flex" />
@@ -384,13 +382,11 @@ export function FeedView({ store, sections, actions, preview }: Props) {
           2) VISTA EN PC (Catálogo ancho a lo ancho O Modo Reels centrado con blur)
          ========================================================================= */}
 
-      {/* A) MODO CATÁLOGO ANCHO PARA PC O MÓVIL SI LAYOUT ES GRID */}
+      {/* A) MODO CATÁLOGO ANCHO PARA PC */}
       <div
         className={cn(
           'h-full min-h-dvh overflow-y-auto overscroll-contain pt-24 pb-16 px-4 md:px-6 transition-colors duration-200',
-          store.layout === 'grid'
-            ? 'block'
-            : desktopMode === 'grid' && !preview
+          desktopMode === 'grid' && !preview
             ? 'hidden md:block'
             : 'hidden'
         )}
@@ -545,9 +541,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
       <div
         className={cn(
           'h-full min-h-dvh w-full overflow-hidden',
-          store.layout === 'grid'
-            ? 'hidden'
-            : desktopMode === 'grid' && !preview
+          desktopMode === 'grid' && !preview
             ? 'md:hidden'
             : 'block'
         )}

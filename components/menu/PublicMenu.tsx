@@ -41,7 +41,7 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
   const [cartOpen, setCartOpen] = useState(false);
 
   const accent = HEX_REGEX.test(store.accent_color ?? '') ? store.accent_color : DEFAULT_ACCENT;
-  const layout = store.layout === 'list' ? 'list' : store.layout === 'grid' ? 'grid' : 'feed';
+  const layout = store.layout === 'list' ? 'list' : 'feed';
 
   const isDark =
     store.theme === 'light'

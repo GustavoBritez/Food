@@ -33,7 +33,7 @@ create table if not exists public.stores (
   cover_url               text,
   tagline                 text check (tagline is null or char_length(tagline) <= 120),
   accent_color            text not null default '#22c55e' check (accent_color ~ '^#[0-9a-fA-F]{6}$'),
-  layout                  text not null default 'feed' check (layout in ('feed', 'list', 'grid')),
+  layout                  text not null default 'feed' check (layout in ('feed', 'list')),
   theme                   text not null default 'dark' check (theme in ('dark', 'light')),
   bg_color                text check (bg_color is null or bg_color ~ '^#[0-9a-fA-F]{6}$'),
   button_style            text not null default 'accent' check (button_style in ('accent', 'whatsapp', 'monochrome')),
@@ -64,7 +64,8 @@ alter table public.stores add column if not exists mp_payment_id text;
 alter table public.stores add column if not exists mp_preference_id text;
 alter table public.stores add column if not exists mp_merchant_order_id text;
 alter table public.stores drop constraint if exists stores_layout_check;
-alter table public.stores add constraint stores_layout_check check (layout in ('feed', 'list', 'grid'));
+update public.stores set layout = 'feed' where layout not in ('feed', 'list');
+alter table public.stores add constraint stores_layout_check check (layout in ('feed', 'list'));
 
 -- Slugs reservados que no pueden ser usados por ningún local
 alter table public.stores drop constraint if exists stores_slug_not_reserved;

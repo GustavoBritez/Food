@@ -64,7 +64,9 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
   const [logoUrl, setLogoUrl] = useState<string | null>(store.logo_url);
   const [coverUrl, setCoverUrl] = useState<string | null>(store.cover_url ?? null);
   const [accentColor, setAccentColor] = useState(store.accent_color || DEFAULT_ACCENT);
-  const [layout, setLayout] = useState<MenuLayout>(store.layout || 'feed');
+  const [layout, setLayout] = useState<MenuLayout>(
+    store.layout === 'list' ? 'list' : 'feed'
+  );
   const [theme, setTheme] = useState<MenuTheme>(store.theme || 'dark');
   const [bgColor, setBgColor] = useState<string>(
     store.bg_color || (store.theme === 'light' ? '#ffffff' : '#0a0a0a')
@@ -239,7 +241,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
           updateError.message?.includes('layout'))
       ) {
         console.warn('Fallback al guardar columnas principales (migración pendiente):', updateError.message);
-        const safeLayout = layout === 'grid' ? 'feed' : layout;
+        const safeLayout = layout;
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('stores')
           .update({
@@ -319,7 +321,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
           <span className="label flex items-center gap-1.5 font-semibold text-ink">
             <Sparkles className="h-4 w-4 text-amber-500" /> Formato del Menú para tus clientes
           </span>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => setLayout('feed')}
@@ -337,26 +339,6 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
               </div>
               <p className="mt-1 text-[12px] leading-relaxed text-muted">
                 Pantalla completa vertical con fotos y videos interactivos (estilo TikTok/Instagram). Ideal para generar antojo visual.
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setLayout('grid')}
-              className={`flex flex-col items-start rounded-2xl border p-4 text-left transition ${
-                layout === 'grid'
-                  ? 'border-ink bg-black/[0.03] ring-2 ring-ink/10'
-                  : 'border-black/10 bg-white hover:bg-canvas'
-              }`}
-            >
-              <div className="flex w-full items-center justify-between">
-                <span className="flex items-center gap-2 text-[14px] font-semibold text-ink">
-                  <LayoutGrid className="h-4 w-4 text-emerald-500" /> Catálogo en Cuadrícula
-                </span>
-                {layout === 'grid' && <Check className="h-4 w-4 text-ink" />}
-              </div>
-              <p className="mt-1 text-[12px] leading-relaxed text-muted">
-                Tarjetas visuales modernas en grilla para celular y PC con fotos amplias, precios claros y botones directos.
               </p>
             </button>
 

@@ -1,4 +1,4 @@
-export type MenuLayout = 'feed' | 'list' | 'grid';
+export type MenuLayout = 'feed' | 'list';
 export type MenuTheme = 'dark' | 'light';
 export type ButtonStyle = 'accent' | 'whatsapp' | 'monochrome';
 
