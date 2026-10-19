@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply bg-white text-ink antialiased;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-full font-medium transition
+      active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn h-11 bg-ink px-5 text-[15px] text-white hover:bg-black;
+  }
+  .btn-secondary {
+    @apply btn h-11 bg-canvas px-5 text-[15px] text-ink hover:bg-black/[0.07];
+  }
+  .btn-whatsapp {
+    @apply btn h-11 bg-whatsapp px-5 text-[15px] text-white hover:brightness-95;
+  }
+  .btn-ghost {
+    @apply btn h-9 px-3 text-sm text-muted hover:bg-canvas hover:text-ink;
+  }
+  .icon-btn {
+    @apply inline-grid h-9 w-9 place-items-center rounded-full text-muted transition hover:bg-canvas hover:text-ink active:scale-95 disabled:opacity-40;
+  }
+  .input {
+    @apply h-11 w-full rounded-xl border border-black/10 bg-white px-3.5 text-[15px] text-ink outline-none transition
+      placeholder:text-subtle focus:border-ink/40 focus:ring-4 focus:ring-black/5;
+  }
+  .label {
+    @apply mb-1.5 block text-[13px] font-medium text-muted;
+  }
+  .card {
+    @apply rounded-3xl border border-black/[0.06] bg-white shadow-soft;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .pb-safe {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
