@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
@@ -93,18 +93,47 @@ const getMenu = cache(async (slug: string) => {
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const menu = await getMenu(params.slug).catch(() => null);
   if (!menu) return { title: 'Menú no encontrado · Carta App' };
+
+  const slug = menu.store.slug;
   const title = `${menu.store.name} · Menú`;
-  const description = `${menu.store.tagline || `Mirá el menú de ${menu.store.name}`} y pedí en la mesa o por WhatsApp.`;
+  const description = `${
+    menu.store.tagline || `Mirá el menú de ${menu.store.name}`
+  } y pedí en la mesa o por WhatsApp.`;
+  const icon192 = `/api/pwa-icon/${slug}?size=192`;
+  const icon512 = `/api/pwa-icon/${slug}?size=512`;
+
   return {
     title,
     description,
-    alternates: { canonical: `/p/${menu.store.slug}` },
+    // 1. Vincula el manifest exclusivo de este bar:
+    manifest: `/p/${slug}/manifest.webmanifest`,
+    alternates: { canonical: `/p/${slug}` },
+    // 2. Fuerza que iPhone (iOS Safari) y Android usen el logo del bar al instalar:
+    icons: {
+      icon: [
+        { url: icon192, sizes: '192x192', type: 'image/png' },
+        { url: icon512, sizes: '512x512', type: 'image/png' },
+      ],
+      apple: [{ url: icon192, sizes: '192x192', type: 'image/png' }],
+    },
+    appleWebApp: {
+      capable: true,
+      title: menu.store.name,
+      statusBarStyle: 'black-translucent',
+    },
     openGraph: {
       title,
       description,
       type: 'website',
-      images: menu.store.logo_url ? [menu.store.logo_url] : undefined,
+      images: [menu.store.logo_url || icon512],
     },
+  };
+}
+
+export async function generateViewport({ params }: Params): Promise<Viewport> {
+  const menu = await getMenu(params.slug).catch(() => null);
+  return {
+    themeColor: menu?.store.accent_color || '#0a0a0a',
   };
 }
 

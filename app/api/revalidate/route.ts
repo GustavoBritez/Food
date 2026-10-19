@@ -28,6 +28,9 @@ export async function POST(request: Request) {
     slugs.add(body.previousSlug);
   }
 
-  slugs.forEach((slug) => revalidatePath(`/p/${slug}`));
+  slugs.forEach((slug) => {
+    revalidatePath(`/p/${slug}`);
+    revalidatePath(`/p/${slug}/manifest.webmanifest`);
+  });
   return NextResponse.json({ revalidated: Array.from(slugs) });
 }
