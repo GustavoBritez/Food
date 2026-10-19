@@ -29,22 +29,39 @@ export function SubscriptionBanner({ store }: Props) {
   const isDemo = store.id === 'demo-store';
   const status = isDemo ? 'active' : store.subscription_status || 'inactive';
 
-  // Mitigación y detección al volver de Mercado Pago Checkout Pro
+  // Mitigación y sincronización en vivo al volver de Mercado Pago Checkout Pro
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const billingParam = params.get('billing');
     const statusParam = params.get('status') || params.get('collection_status');
+    const paymentId = params.get('payment_id') || params.get('collection_id');
 
     if (
-      (billingParam === 'success' || statusParam === 'approved') &&
+      (billingParam === 'success' || statusParam === 'approved' || paymentId) &&
       status !== 'active'
     ) {
       setCheckingPayment(true);
-      const timer = setTimeout(() => {
-        window.location.href = '/admin';
-      }, 2500);
-      return () => clearTimeout(timer);
+      fetch('/api/mercadopago/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.updated) {
+            window.location.href = '/admin?confirmed=1';
+          } else {
+            setTimeout(() => {
+              window.location.href = '/admin';
+            }, 2500);
+          }
+        })
+        .catch(() => {
+          setTimeout(() => {
+            window.location.href = '/admin';
+          }, 2500);
+        });
     }
   }, [status]);
 
