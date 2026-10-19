@@ -158,10 +158,10 @@ export function ListView({ store, sections, actions, preview }: Props) {
                   <h2 className="text-[14px] font-bold uppercase tracking-wider text-subtle">{category.name}</h2>
                   <span className="text-[12px] text-muted">({products.length})</span>
                 </div>
-                {/* Cuadrícula responsiva en desktop */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Cuadrícula responsiva (1 columna en celular y simulador iPhone, 2 columnas en PC) */}
+                <div className={cn('grid gap-3.5', preview ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2')}>
                   {products.map((p) => (
-                    <div key={p.id} className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm hover:shadow-md transition">
+                    <div key={p.id} className="rounded-2xl border border-black/[0.06] bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-md transition">
                       <ProductCard
                         product={p}
                         qty={actions.qtyOf(p.id)}
