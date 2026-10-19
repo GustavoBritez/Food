@@ -14,6 +14,8 @@ export type Store = {
   slug: string;
   whatsapp: string;
   logo_url: string | null;
+  /** Foto de portada o imagen de fondo del local */
+  cover_url: string | null;
   created_by: string | null;
   /** Frase corta debajo del nombre (ej: "Pizzas a la piedra · Palermo") */
   tagline: string | null;
@@ -53,7 +55,7 @@ export type Product = {
 /** Datos del local que necesita el menú público */
 export type PublicStore = Pick<
   Store,
-  'name' | 'slug' | 'whatsapp' | 'logo_url' | 'tagline' | 'accent_color' | 'layout'
+  'name' | 'slug' | 'whatsapp' | 'logo_url' | 'cover_url' | 'tagline' | 'accent_color' | 'layout'
 > & {
   subscription_status?: SubscriptionStatus;
   current_period_end?: string | null;

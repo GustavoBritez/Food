@@ -30,6 +30,7 @@ create table if not exists public.stores (
   -- Teléfono con código de país sin "+" (ej: 5491123456789)
   whatsapp                text not null check (whatsapp ~ '^[0-9]{8,15}$'),
   logo_url                text,
+  cover_url               text,
   tagline                 text check (tagline is null or char_length(tagline) <= 120),
   accent_color            text not null default '#22c55e' check (accent_color ~ '^#[0-9a-fA-F]{6}$'),
   layout                  text not null default 'feed' check (layout in ('feed', 'list')),
@@ -43,6 +44,9 @@ create table if not exists public.stores (
   current_period_end      timestamptz,
   plan_price_id           text
 );
+
+-- Asegura la columna si la tabla ya fue creada previamente
+alter table public.stores add column if not exists cover_url text;
 
 -- Slugs reservados que no pueden ser usados por ningún local
 alter table public.stores drop constraint if exists stores_slug_not_reserved;
@@ -307,7 +311,7 @@ create policy "menus: el dueño borra su carpeta" on storage.objects
 -- para que puedas probar la aplicación inmediatamente.
 
 insert into public.stores (
-  id, name, slug, whatsapp, logo_url, created_by, tagline, accent_color, layout,
+  id, name, slug, whatsapp, logo_url, cover_url, created_by, tagline, accent_color, layout,
   subscription_status, current_period_end
 )
 values (
@@ -316,6 +320,7 @@ values (
   'bar-de-prueba',
   '5491123456789',
   null,
+  'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
   null,
   'Pizzas, burgers y cerveza artesanal',
   '#f97316',
@@ -327,6 +332,7 @@ on conflict (id) do update
   set name = excluded.name,
       slug = excluded.slug,
       whatsapp = excluded.whatsapp,
+      cover_url = excluded.cover_url,
       tagline = excluded.tagline,
       accent_color = excluded.accent_color,
       layout = excluded.layout,

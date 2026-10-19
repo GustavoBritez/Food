@@ -33,11 +33,12 @@ export function LoginForm({ next, error }: { next: string; error?: string }) {
     });
 
     if (error) {
+      console.error('Error al enviar Magic Link:', error);
       setStatus('error');
       setMessage(
         error.status === 429
           ? 'Pediste demasiados links. Esperá un minuto y probá de nuevo.'
-          : 'No pudimos enviar el mail. Revisá la dirección.'
+          : error.message || 'No pudimos enviar el mail. Revisá la dirección.'
       );
       return;
     }

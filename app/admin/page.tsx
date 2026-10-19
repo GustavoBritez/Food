@@ -24,6 +24,7 @@ export default async function AdminPage({ searchParams }: Props) {
       slug: 'demo',
       whatsapp: '5491128989237',
       logo_url: null,
+      cover_url: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
       created_by: 'demo-user',
       tagline: 'Cocina casera, burgers y tragos · Demo de Carta App',
       accent_color: '#22c55e',

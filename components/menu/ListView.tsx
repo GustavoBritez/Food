@@ -50,6 +50,27 @@ export function ListView({ store, sections, actions, preview }: Props) {
   return (
     <>
       <div ref={scrollerRef} className="relative h-full min-h-dvh overflow-y-auto overscroll-contain bg-white">
+        {/* Banner de Portada / Imagen de fondo del local */}
+        {store.cover_url && (
+          <div className="relative h-36 sm:h-52 w-full overflow-hidden bg-neutral-950">
+            <Image
+              src={store.cover_url}
+              alt={store.name}
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, 1200px"
+              className="object-cover opacity-90 transition duration-300"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+            <div className="absolute bottom-3 left-4 right-4 mx-auto max-w-5xl flex items-end justify-between text-white">
+              <span className="text-[11px] font-semibold tracking-wider uppercase opacity-75">
+                Menú Oficial
+              </span>
+              <PwaInstallButton variant="glass" label="App" className="sm:hidden text-[11px] py-1 px-2.5" />
+            </div>
+          </div>
+        )}
+
         <header ref={headerRef} className="sticky top-0 z-20 border-b border-black/[0.06] bg-white/95 backdrop-blur-xl">
           <div className="mx-auto max-w-5xl px-4 pt-4">
             <div className="flex items-center justify-between gap-3">
@@ -58,12 +79,12 @@ export function ListView({ store, sections, actions, preview }: Props) {
                   <Image
                     src={store.logo_url}
                     alt={store.name}
-                    width={44}
-                    height={44}
-                    className="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 ring-black/5"
+                    width={48}
+                    height={48}
+                    className="h-12 w-12 shrink-0 rounded-2xl object-cover ring-2 ring-white shadow-md"
                   />
                 ) : (
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--accent)] text-lg font-semibold text-[var(--accent-fg)]">
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[var(--accent)] text-lg font-semibold text-[var(--accent-fg)] shadow-md">
                     {initial}
                   </span>
                 )}

@@ -29,7 +29,7 @@ const getMenu = cache(async (slug: string) => {
 
     const { data: store } = await supabase
       .from('stores')
-      .select('id, name, slug, whatsapp, logo_url, tagline, accent_color, layout, subscription_status, current_period_end')
+      .select('id, name, slug, whatsapp, logo_url, cover_url, tagline, accent_color, layout, subscription_status, current_period_end')
       .eq('slug', clean)
       .maybeSingle();
 

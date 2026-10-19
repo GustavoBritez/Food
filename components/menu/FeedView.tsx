@@ -507,17 +507,31 @@ export function FeedView({ store, sections, actions, preview }: Props) {
           {/* Tarjeta final del feed */}
           <section
             data-index={slides.length}
-            className="relative flex h-full min-h-dvh w-full snap-start snap-always flex-col items-center justify-center bg-neutral-950 px-8 text-center text-white"
+            className="relative flex h-full min-h-dvh w-full snap-start snap-always flex-col items-center justify-center bg-neutral-950 px-8 text-center text-white overflow-hidden"
           >
-            <span className="grid h-16 w-16 place-items-center overflow-hidden rounded-2xl bg-[var(--accent)] text-2xl font-bold text-[var(--accent-fg)]">
-              {store.logo_url ? (
-                <Image src={store.logo_url} alt={store.name} width={64} height={64} className="h-full w-full object-cover" />
-              ) : (
-                initial
-              )}
-            </span>
-            <h2 className="mt-5 text-2xl font-bold tracking-tight">¡Llegaste al final!</h2>
-            <p className="mt-2 text-[14px] text-white/60">Ya viste todos los platos de {store.name}.</p>
+            {store.cover_url && (
+              <div className="absolute inset-0 z-0 overflow-hidden opacity-25 pointer-events-none">
+                <Image
+                  src={store.cover_url}
+                  alt={store.name}
+                  fill
+                  sizes="100vw"
+                  className="object-cover blur-sm scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/80 to-neutral-950" />
+              </div>
+            )}
+            <div className="relative z-10 flex flex-col items-center">
+              <span className="grid h-16 w-16 place-items-center overflow-hidden rounded-2xl bg-[var(--accent)] text-2xl font-bold text-[var(--accent-fg)] shadow-2xl ring-2 ring-white/10">
+                {store.logo_url ? (
+                  <Image src={store.logo_url} alt={store.name} width={64} height={64} className="h-full w-full object-cover" />
+                ) : (
+                  initial
+                )}
+              </span>
+              <h2 className="mt-5 text-2xl font-bold tracking-tight">¡Llegaste al final!</h2>
+              <p className="mt-2 text-[14px] text-white/60">Ya viste todos los platos de {store.name}.</p>
+            </div>
 
             <div className="mt-7 grid w-full max-w-xs gap-2.5">
               {actions.count > 0 && (
@@ -707,8 +721,20 @@ export function FeedView({ store, sections, actions, preview }: Props) {
           INFORMACIÓN DEL LOCAL Y DESCARGA DE APP (PWA)
          ========================================================================= */}
       <Sheet open={infoOpen} onClose={() => setInfoOpen(false)} forceMobile={false}>
-        <div className="flex items-center gap-3.5 pt-2">
-          <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[var(--accent)] text-xl font-bold text-[var(--accent-fg)] shadow-md">
+        {store.cover_url && (
+          <div className="relative -mx-6 -mt-6 mb-4 h-32 overflow-hidden rounded-t-3xl bg-neutral-900">
+            <Image
+              src={store.cover_url}
+              alt={store.name}
+              fill
+              sizes="500px"
+              className="object-cover opacity-90"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          </div>
+        )}
+        <div className="flex items-center gap-3.5 pt-1">
+          <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[var(--accent)] text-xl font-bold text-[var(--accent-fg)] shadow-md ring-2 ring-white">
             {store.logo_url ? (
               <Image src={store.logo_url} alt={store.name} width={56} height={56} className="h-full w-full object-cover" />
             ) : (

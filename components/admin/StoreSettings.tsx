@@ -42,15 +42,18 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
   const [slug, setSlug] = useState(store.slug);
   const [whatsapp, setWhatsapp] = useState(store.whatsapp);
   const [logoUrl, setLogoUrl] = useState<string | null>(store.logo_url);
+  const [coverUrl, setCoverUrl] = useState<string | null>(store.cover_url ?? null);
   const [accentColor, setAccentColor] = useState(store.accent_color || DEFAULT_ACCENT);
   const [layout, setLayout] = useState<MenuLayout>(store.layout || 'feed');
 
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   // Avisa al dashboard para previsualizar los cambios en vivo en el celular
   useEffect(() => {
@@ -60,10 +63,11 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
       slug,
       whatsapp,
       logo_url: logoUrl,
+      cover_url: coverUrl,
       accent_color: accentColor,
       layout,
     });
-  }, [name, tagline, slug, whatsapp, logoUrl, accentColor, layout, onPreviewDraft]);
+  }, [name, tagline, slug, whatsapp, logoUrl, coverUrl, accentColor, layout, onPreviewDraft]);
 
   // Auto-slugify si el usuario toca el nombre pero nunca tocó el slug manualmente
   function handleNameChange(val: string) {
@@ -88,6 +92,24 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
     } finally {
       setUploadingLogo(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingCover(true);
+      setError('');
+      const supabase = createClient();
+      const url = await uploadImage(supabase, userId, file);
+      setCoverUrl(url);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'No se pudo subir la foto de portada.');
+    } finally {
+      setUploadingCover(false);
+      if (coverInputRef.current) coverInputRef.current.value = '';
     }
   }
 
@@ -122,6 +144,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
           slug: cleanSlug,
           whatsapp: cleanWp,
           logo_url: logoUrl,
+          cover_url: coverUrl,
           accent_color: accentColor,
           layout,
         };
@@ -140,6 +163,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
           slug: cleanSlug,
           whatsapp: cleanWp,
           logo_url: logoUrl,
+          cover_url: coverUrl,
           accent_color: accentColor,
           layout,
         })
@@ -301,6 +325,58 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
                   className="btn-ghost h-9 text-[13px] text-red-600"
                 >
                   <Trash2 className="h-3.5 w-3.5" /> Quitar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Foto de Portada / Imagen de Fondo del Menú */}
+        <div>
+          <span className="label font-semibold text-ink">Foto de Portada / Fondo del Menú</span>
+          <p className="text-[12px] text-muted mb-2.5">
+            Aparece en la cabecera y el fondo de tu carta digital. Recomendado: foto horizontal de tu local o platos (1200 × 500 px).
+          </p>
+          <div className="space-y-3">
+            <div className="relative h-32 sm:h-36 w-full overflow-hidden rounded-2xl border border-black/10 bg-canvas">
+              {coverUrl ? (
+                <>
+                  <Image src={coverUrl} alt="Portada" fill sizes="(max-width: 768px) 100vw, 800px" className="object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                </>
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-subtle text-xs">
+                  <Camera className="h-6 w-6" />
+                  <span>Sin foto de portada cargada</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="btn-secondary h-9 cursor-pointer text-[13px]">
+                {uploadingCover ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Camera className="h-4 w-4" /> {coverUrl ? 'Cambiar foto de portada' : 'Subir foto de portada'}
+                  </>
+                )}
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  disabled={uploadingCover}
+                  onChange={handleCoverUpload}
+                  className="hidden"
+                />
+              </label>
+              {coverUrl && (
+                <button
+                  type="button"
+                  onClick={() => setCoverUrl(null)}
+                  className="btn-ghost h-9 text-[13px] text-red-600"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Quitar portada
                 </button>
               )}
             </div>
