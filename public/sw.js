@@ -1,11 +1,11 @@
 /**
  * Service Worker para Carta App PWA
- * Habilita instalación nativa (Add to Home Screen) y caché de recursos clave.
+ * Cachea únicamente iconos y fuentes estáticas del propio dominio.
+ * Las páginas (/p/[slug], /, /admin) van siempre por Network-First para garantizar precios al día.
  */
 
-const CACHE_NAME = 'cartaapp-v1';
+const CACHE_NAME = 'cartaapp-v2';
 const PRECACHE_URLS = [
-  '/',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -14,36 +14,44 @@ const PRECACHE_URLS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)).then(() => self.skipWaiting())
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys.map((key) => {
+            if (key !== CACHE_NAME) {
+              return caches.delete(key);
+            }
+          })
+        )
       )
-    ).then(() => self.clients.claim())
+      .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Solo interceptamos requests GET dentro del mismo origen o imágenes
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
 
-  // No cachear API routes, autenticación de Supabase ni el panel de administración
-  if (
-    url.pathname.startsWith('/api/') ||
-    url.pathname.startsWith('/auth/') ||
-    url.pathname.startsWith('/admin')
-  ) {
+  // Solo cacheamos activos estáticos propios (iconos y fuentes de la PWA)
+  const isStaticPwaAsset =
+    url.origin === self.location.origin &&
+    (url.pathname.startsWith('/icons/') ||
+      url.pathname === '/manifest.webmanifest' ||
+      url.pathname.endsWith('.woff2'));
+
+  if (!isStaticPwaAsset) {
+    // Todo el resto (cartas /p/[slug], imágenes de Supabase, API, Admin) va directo a red
     return;
   }
 
@@ -52,35 +60,15 @@ self.addEventListener('fetch', (event) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      return fetch(event.request)
-        .then((networkResponse) => {
-          // Cachear estáticos e iconos
-          if (
-            networkResponse.status === 200 &&
-            (url.pathname.startsWith('/icons/') ||
-              url.pathname.endsWith('.png') ||
-              url.pathname.endsWith('.svg') ||
-              url.pathname.endsWith('.woff2'))
-          ) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(async () => {
-          // Si no hay red y teníamos en caché la página inicial
-          if (event.request.mode === 'navigate') {
-            const fallback = await caches.match('/');
-            if (fallback) return fallback;
-          }
-          return new Response('Sin conexión', {
-            status: 503,
-            statusText: 'Service Unavailable',
-            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      return fetch(event.request).then((networkResponse) => {
+        if (networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
           });
-        });
+        }
+        return networkResponse;
+      });
     })
   );
 });

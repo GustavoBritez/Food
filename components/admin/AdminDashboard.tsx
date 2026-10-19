@@ -26,6 +26,7 @@ import { ProductModal } from './ProductModal';
 import { QrModal } from './QrModal';
 import { StoreSettings } from './StoreSettings';
 import { SubscriptionBanner } from './SubscriptionBanner';
+import { removeImageByUrl } from '@/lib/storage';
 import { createClient } from '@/lib/supabase/client';
 import type { Category, Product, Store } from '@/lib/types';
 import { formatPrice, menuUrl } from '@/lib/utils';
@@ -150,11 +151,17 @@ export function AdminDashboard({
       return;
     }
 
+    const prodsInCat = products.filter((p) => p.category_id === catId);
     const { error } = await supabase.from('categories').delete().eq('id', catId);
     if (error) {
       alert('No se pudo eliminar la categoría.');
       return;
     }
+    // Limpieza de imágenes huérfanas en Storage
+    prodsInCat.forEach((p) => {
+      if (p.photo_url) removeImageByUrl(supabase, p.photo_url);
+      if (p.video_url) removeImageByUrl(supabase, p.video_url);
+    });
     setCategories((prev) => prev.filter((c) => c.id !== catId));
     setProducts((prev) => prev.filter((p) => p.category_id !== catId));
     triggerRevalidate();
@@ -188,6 +195,7 @@ export function AdminDashboard({
     }
 
     if (data.id) {
+      const oldProd = products.find((p) => p.id === data.id);
       const { id, ...rest } = data;
       const { data: updated, error } = await supabase
         .from('products')
@@ -196,6 +204,13 @@ export function AdminDashboard({
         .select()
         .single();
       if (error) throw error;
+      // Si cambió de foto o video, borramos el anterior para no dejar huérfanos en Storage
+      if (oldProd?.photo_url && oldProd.photo_url !== data.photo_url) {
+        removeImageByUrl(supabase, oldProd.photo_url);
+      }
+      if (oldProd?.video_url && oldProd.video_url !== data.video_url) {
+        removeImageByUrl(supabase, oldProd.video_url);
+      }
       setProducts((prev) =>
         prev
           .map((p) => (p.id === id ? { ...(updated as Product), price: Number(updated.price) } : p))
@@ -249,11 +264,15 @@ export function AdminDashboard({
 
   async function handleDeleteProduct(prodId: string) {
     if (!confirm('¿Eliminar este producto?')) return;
+    const prod = products.find((p) => p.id === prodId);
     const { error } = await supabase.from('products').delete().eq('id', prodId);
     if (error) {
       alert('No se pudo eliminar el producto.');
       return;
     }
+    // Limpieza de foto y video huérfanos en Storage
+    if (prod?.photo_url) removeImageByUrl(supabase, prod.photo_url);
+    if (prod?.video_url) removeImageByUrl(supabase, prod.video_url);
     setProducts((prev) => prev.filter((p) => p.id !== prodId));
     triggerRevalidate();
   }

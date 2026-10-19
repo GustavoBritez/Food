@@ -15,6 +15,21 @@ type CookieToSet = {
  * Solo corre en las rutas del matcher: el menú público (/p/*) no pasa por acá.
  */
 export async function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+
+  // 1. El webhook de Stripe no usa sesión de usuario ni cookies
+  if (pathname === '/api/stripe/webhook') {
+    return NextResponse.next();
+  }
+
+  // 2. Permitir el acceso libre al modo interactivo Demo del panel (/admin?demo=true o ?demo=1)
+  if (
+    pathname === '/admin' &&
+    (searchParams.get('demo') === 'true' || searchParams.get('demo') === '1')
+  ) {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({ request });
 
   // Si no hay Supabase configurado todavía en local, dejamos pasar para ver la UI
@@ -40,8 +55,6 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
 
   if (!user && pathname.startsWith('/admin')) {
     const url = request.nextUrl.clone();

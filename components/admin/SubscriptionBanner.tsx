@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -19,9 +19,23 @@ type Props = {
 export function SubscriptionBanner({ store }: Props) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
 
   const isDemo = store.id === 'demo-store';
   const status = isDemo ? 'active' : store.subscription_status || 'inactive';
+
+  // Mitigación de Race Condition al volver de Stripe Checkout
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if ((params.get('billing') === 'success' || params.get('session_id')) && status === 'inactive') {
+      setCheckingPayment(true);
+      const timer = setTimeout(() => {
+        window.location.href = '/admin';
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
 
   const periodEndFormatted = store.current_period_end
     ? new Intl.DateTimeFormat('es-AR', {
@@ -78,6 +92,21 @@ export function SubscriptionBanner({ store }: Props) {
       setErrorMsg(err instanceof Error ? err.message : 'Error inesperado');
       setLoading(false);
     }
+  }
+
+  // Estado de confirmación de pago al volver de Stripe Checkout
+  if (checkingPayment) {
+    return (
+      <div className="flex items-center gap-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-900 shadow-sm animate-pulse">
+        <Loader2 className="h-5 w-5 animate-spin text-emerald-600 shrink-0" />
+        <div>
+          <p className="text-sm font-bold text-emerald-950">Confirmando tu suscripción con el banco...</p>
+          <p className="text-xs text-emerald-800 mt-0.5">
+            Stripe procesó tu pago correctamente. Estamos activando tu local en unos segundos.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   // A. MODO DEMO

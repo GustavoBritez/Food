@@ -217,6 +217,10 @@ export async function POST(req: Request) {
     // 2. Registramos la idempotencia SOLO cuando el procesamiento fue 100% exitoso
     await adminSupabase.from('stripe_webhook_events').insert({ id: event.id });
 
+    // Limpieza oportunista de eventos viejos (> 90 días) para evitar crecimiento infinito
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    await adminSupabase.from('stripe_webhook_events').delete().lt('created_at', ninetyDaysAgo);
+
     return NextResponse.json({ received: true });
   } catch (error: unknown) {
     console.error('Error procesando Stripe Webhook:', error);

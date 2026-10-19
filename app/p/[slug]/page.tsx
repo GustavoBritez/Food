@@ -24,62 +24,76 @@ const getMenu = cache(async (slug: string) => {
     };
   }
 
-  try {
-    const supabase = createPublicClient();
+  const supabase = createPublicClient();
 
-    const { data: store } = await supabase
-      .from('stores')
-      .select('id, name, slug, whatsapp, logo_url, cover_url, tagline, accent_color, layout, subscription_status, current_period_end')
-      .eq('slug', clean)
-      .maybeSingle();
+  const { data: store, error: storeError } = await supabase
+    .from('stores')
+    .select(
+      'id, name, slug, whatsapp, logo_url, cover_url, tagline, accent_color, layout, subscription_status, current_period_end'
+    )
+    .eq('slug', clean)
+    .maybeSingle();
 
-    if (!store) return null;
+  // Si hubo un error de red/DB en Supabase, lanzamos excepción para que Next.js ISR
+  // conserve la última versión cacheada válida y NO cachee un 404 falso.
+  if (storeError) {
+    console.error(`Error de DB buscando store (${clean}):`, storeError);
+    throw new Error('Database error fetching store');
+  }
 
-    // REGLA CRÍTICA DE SEGURIDAD: Validación de Suscripción en Carta Pública
-    const isSubActive =
-      store.subscription_status === 'active' || store.subscription_status === 'trialing';
-    const isNotExpired =
-      !store.current_period_end || new Date(store.current_period_end).getTime() > Date.now();
-    const hasActiveSubscription = Boolean(isSubActive && isNotExpired);
+  if (!store) return null;
 
-    // Si la suscripción no está activa, NO consultamos ni exponemos productos o precios
-    if (!hasActiveSubscription) {
-      return {
-        store: store as PublicStore,
-        categories: [] as Category[],
-        products: [] as Product[],
-        isSubscribed: false,
-      };
-    }
+  // REGLA CRÍTICA DE SEGURIDAD: Validación de Suscripción en Carta Pública
+  const isSubActive =
+    store.subscription_status === 'active' || store.subscription_status === 'trialing';
+  const isNotExpired =
+    !store.current_period_end || new Date(store.current_period_end).getTime() > Date.now();
+  const hasActiveSubscription = Boolean(isSubActive && isNotExpired);
 
-    const [{ data: categories }, { data: products }] = await Promise.all([
-      supabase
-        .from('categories')
-        .select('id, store_id, name, order')
-        .eq('store_id', store.id)
-        .order('order', { ascending: true }),
-      supabase
-        .from('products')
-        .select('id, store_id, category_id, name, description, price, photo_url, video_url, available, order')
-        .eq('store_id', store.id)
-        .eq('available', true)
-        .order('order', { ascending: true }),
-    ]);
-
+  // Si la suscripción no está activa, NO consultamos ni exponemos productos o precios
+  if (!hasActiveSubscription) {
     return {
       store: store as PublicStore,
-      categories: (categories ?? []) as Category[],
-      products: ((products ?? []) as Product[]).map((p) => ({ ...p, price: Number(p.price) })),
-      isSubscribed: true,
+      categories: [] as Category[],
+      products: [] as Product[],
+      isSubscribed: false,
     };
-  } catch (err) {
-    console.error('Error fetching menu for slug:', slug, err);
-    return null;
   }
+
+  const [
+    { data: categories, error: catError },
+    { data: products, error: prodError },
+  ] = await Promise.all([
+    supabase
+      .from('categories')
+      .select('id, store_id, name, order')
+      .eq('store_id', store.id)
+      .order('order', { ascending: true }),
+    supabase
+      .from('products')
+      .select(
+        'id, store_id, category_id, name, description, price, photo_url, video_url, available, order'
+      )
+      .eq('store_id', store.id)
+      .eq('available', true)
+      .order('order', { ascending: true }),
+  ]);
+
+  if (catError || prodError) {
+    console.error(`Error cargando menú de ${clean}:`, catError || prodError);
+    throw new Error('Database error fetching menu items');
+  }
+
+  return {
+    store: store as PublicStore,
+    categories: (categories ?? []) as Category[],
+    products: ((products ?? []) as Product[]).map((p) => ({ ...p, price: Number(p.price) })),
+    isSubscribed: true,
+  };
 });
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const menu = await getMenu(params.slug);
+  const menu = await getMenu(params.slug).catch(() => null);
   if (!menu) return { title: 'Menú no encontrado · Carta App' };
   const title = `${menu.store.name} · Menú`;
   const description = `${menu.store.tagline || `Mirá el menú de ${menu.store.name}`} y pedí en la mesa o por WhatsApp.`;

@@ -140,7 +140,12 @@ export function ProductModal({
       });
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al guardar el producto.');
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('row-level security') || msg.includes('42501')) {
+        setError('Para guardar platos necesitás activar tu suscripción Pro ($30 USD/mes) desde el banner superior.');
+      } else {
+        setError(msg || 'Error al guardar el producto.');
+      }
     } finally {
       setSaving(false);
     }

@@ -13,7 +13,7 @@ import {
   Store as StoreIcon,
   Trash2,
 } from 'lucide-react';
-import { uploadImage } from '@/lib/storage';
+import { uploadImage, removeImageByUrl } from '@/lib/storage';
 import { createClient } from '@/lib/supabase/client';
 import type { MenuLayout, Store } from '@/lib/types';
 import { DEFAULT_ACCENT, normalizeWhatsapp, SLUG_REGEX, slugify } from '@/lib/utils';
@@ -176,6 +176,14 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
           throw new Error(`El link "/p/${cleanSlug}" ya está siendo usado por otro local. Elegí otro.`);
         }
         throw new Error(updateError.message);
+      }
+
+      // Limpiar imágenes antiguas de Storage si fueron reemplazadas o eliminadas
+      if (store.logo_url && store.logo_url !== logoUrl) {
+        removeImageByUrl(supabase, store.logo_url);
+      }
+      if (store.cover_url && store.cover_url !== coverUrl) {
+        removeImageByUrl(supabase, store.cover_url);
       }
 
       const prevSlug = store.slug !== cleanSlug ? store.slug : undefined;
@@ -434,6 +442,11 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
                 className="h-11 w-full bg-transparent px-1 text-[14px] font-mono text-ink outline-none"
               />
             </div>
+            {slug !== store.slug && (
+              <p className="mt-1 text-[11px] text-amber-700">
+                ⚠️ Cambiar el link alterará la URL de tu carta. Si ya imprimiste códigos QR físicos en las mesas, deberás reimprimirlos con el nuevo link.
+              </p>
+            )}
           </div>
 
           <div>
