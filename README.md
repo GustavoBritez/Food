@@ -1,141 +1,73 @@
 # Carta App 🍽️📲
 
-> **Crea tu menú digital en 2 minutos.**  
-> Tus clientes escanean el QR en la mesa o entran desde Instagram: pueden armar su pedido para **mostrárselo al mozo** en el local o **enviártelo listo por WhatsApp** con un solo toque. Sin comisiones, sin pagos online, sin fricción.
-
-Desarrollado con **Next.js 14 (App Router) + TailwindCSS + TypeScript + Supabase**. Listo para deployar en **Vercel**.
+> **La plataforma de menús digitales interactivos para bares, restaurantes y cafeterías.**  
+> Diseñada para transformar la experiencia de pedir comida: formatos modernos tipo Reels, pedidos directos por WhatsApp, resumen para mozos en mesa y autogestión total para los dueños.
 
 ---
 
-## 🚀 Arquitectura y Flujos del Negocio
+## 💡 ¿De qué trata Carta App?
 
-```
-                                  ┌────────────────────────┐
-                                  │   Cliente escanea QR   │
-                                  │       o abre link      │
-                                  └───────────┬────────────┘
-                                              │
-                                              ▼
-                                    ┌───────────────────┐
-                                    │    /p/[slug]      │
-                                    │   Menú Público    │
-                                    └────┬──────────┬───┘
-                                         │          │
-                     ┌───────────────────┘          └──────────────────┐
-                     ▼                                                 ▼
-        [ FLUJO 1: DENTRO DEL LOCAL ]                    [ FLUJO 2: FUERA DEL LOCAL ]
-        1. Elige platos en el menú                       1. Toca "Pedir por WhatsApp"
-        2. Toca "Mostrar al mozo"                           o arma el pedido en el carrito
-        3. Se abre modal con el resumen                  2. Se abre wa.me/{whatsapp}
-           ("2x Pizza Muzzarella", etc.)                    con mensaje pre-formateado
-        4. El mozo toma nota y cobra en mesa             3. Te llega el pedido a la cocina
-```
+**Carta App** es una solución SaaS multi-tenant que reemplaza los aburridos códigos QR que abren archivos PDF pesados e incómodos. Ofrece a los locales gastronómicos una aplicación web ultrarrápida, interactiva y personalizable donde los comensales pueden explorar platos con fotos y videos de alta calidad, armar su pedido y enviarlo sin intermediarios ni comisiones.
 
-### Reglas de Negocio
-* **No cobra ni procesa pagos:** Todo se paga en el local o por transferencia directa acordada por WhatsApp.
-* **Mensaje URL-encoded:** Genera un texto limpio y profesional para WhatsApp:
-  ```text
-  Hola Bar de Prueba! Quiero pedir:
-  - 1x Pizza Muzzarella $9.500
-  - 2x Pinta IPA $9.600
-  Total: $19.100
-  ```
-* **QR de alta resolución:** Generado con `qrcode.react`, apunta a `https://[tudominio]/p/[slug]` con el logo de tu local centrado. Se descarga en PNG de 1024x1024 px listo para imprimir.
+Para los dueños de bares y restaurantes, es un centro de comando intuitivo para actualizar precios al instante, pausar productos agotados en un clic, generar códigos QR listos para imprimir y gestionar su suscripción de forma autónoma.
 
 ---
 
-## 🗄️ Esquema de Base de Datos (Supabase)
+## ⚡ Características Principales (Features)
 
-La base de datos utiliza **Row Level Security (RLS)** estricto: el menú es público para lectura (`anon`), pero solo el dueño autenticado puede modificar su local, categorías y productos.
-
-* **`stores`**: ID, nombre, slug (`/p/[slug]`), número de WhatsApp (formato internacional ej: `5491123456789`), logo y usuario dueño (`created_by`).
-* **`categories`**: ID, store_id, nombre, orden.
-* **`products`**: ID, store_id, category_id, nombre, descripción, precio, foto_url, disponibilidad (`available`), orden.
-* **Storage Bucket `menus`**: Bucket público para almacenar fotos de productos y logos comprimidos automáticamente a WebP.
-
----
-
-## ⚡ Guía Paso a Paso: Configurar Supabase
-
-### 1. Crear un Proyecto en Supabase
-1. Ingresá a [supabase.com](https://supabase.com) y creá un proyecto nuevo (gratuito).
-2. En el panel de tu proyecto, andá a **Project Settings > API**.
-3. Copiá la **Project URL** y la **anon public key**.
-
-### 2. Ejecutar la Migración de Base de Datos
-1. En el menú lateral de Supabase, andá a **SQL Editor**.
-2. Hacé clic en **New query**, copiá todo el contenido del archivo [`supabase/migrations/20261018000000_init.sql`](supabase/migrations/20261018000000_init.sql) y pegalo.
-3. Hacé clic en **Run**.  
-   *Esto creará las tablas `stores`, `categories`, `products`, las políticas RLS y el bucket de almacenamiento `menus`.*
-
-### 3. Cargar el Local de Ejemplo ("Bar de Prueba")
-1. En el **SQL Editor**, abrí otra consulta y pegá el contenido de [`supabase/seed.sql`](supabase/seed.sql).
-2. Hacé clic en **Run**.
-3. ¡Listo! Ya tenés cargado el local con 6 categorías y 16 productos con fotos reales en `/p/bar-de-prueba`.
-
-> **¿Cómo adueñarte del Bar de Prueba desde `/admin`?**  
-> Una vez que te loguees en la app con tu email, ejecutá en el SQL Editor:
-> ```sql
-> update public.stores
->    set created_by = (select id from auth.users where email = 'TU_EMAIL@ejemplo.com')
->  where slug = 'bar-de-prueba';
-> ```
-
-### 4. Configurar Auth (Magic Link sin Contraseña)
-1. En Supabase, andá a **Authentication > Providers > Email**.
-   * Asegurate de que **Enable Email provider** esté activo.
-   * Podés dejar desactivado "Confirm email" si querés login directo por magic link.
-2. Andá a **Authentication > URL Configuration**:
-   * **Site URL**: En local poné `http://localhost:3000`. En producción poné `https://tu-dominio.vercel.app`.
-   * **Redirect URLs**: Agregá:
-     * `http://localhost:3000/auth/callback`
-     * `https://tu-dominio.vercel.app/auth/callback`
+### 📱 1. Experiencia del Menú para Comensales (`/p/[slug]`)
+* **Modo Reels Interactivo:** Navegación vertical a pantalla completa con videos y fotos de platos en alta definición, inspirada en las interfaces dinámicas de redes sociales.
+* **Modo Lista Visual:** Diseño clásico y estructurado por categorías con buscador instantáneo, ideal para quienes buscan rapidez o comensales tradicionales.
+* **Doble Flujo de Pedidos Flexible:**
+  * **Dentro del local (Mostrar al mozo):** El cliente selecciona sus platos y abre un resumen claro y ordenado en pantalla para que el mozo tome nota en mesa sin errores.
+  * **Delivery / Takeaway (Pedir por WhatsApp):** El carrito genera un mensaje estructurado y codificado con el detalle de los productos, cantidades y precio total, redirigiendo directamente a la conversación de WhatsApp oficial del local (`wa.me`).
+* **PWA Instalable (Progressive Web App):** Tanto los clientes habituales como el personal del bar pueden instalar Carta App directamente en la pantalla de inicio de su teléfono (iOS y Android) como si fuera una aplicación nativa, con soporte offline básico y sin pasar por las tiendas de aplicaciones.
+* **Carga Instantánea con ISR:** Arquitectura con regeneración estática incremental que entrega los menús en menos de 10 milisegundos desde servidores perimetrales (Edge CDN).
 
 ---
 
-## 💻 Instalación y Ejecución Local
-
-1. Cloná el repositorio e instalá las dependencias:
-   ```bash
-   npm install
-   ```
-
-2. Creá tu archivo `.env.local` a partir de `.env.example`:
-   ```bash
-   cp .env.example .env.local
-   ```
-   Completá con tus credenciales de Supabase:
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key-aqui
-   NEXT_PUBLIC_SITE_URL=http://localhost:3000
-   ```
-
-3. Levantá el servidor de desarrollo:
-   ```bash
-   npm run dev
-   ```
-   Abrí [http://localhost:3000](http://localhost:3000) en tu navegador.
+### 🛠️ 2. Panel de Control del Dueño (`/admin`)
+* **Simulador de iPhone en Tiempo Real:** Interfaz dividida en dos columnas que muestra un marco interactivo de smartphone donde el dueño ve reflejado en vivo exactamente cómo queda su carta mientras realiza modificaciones.
+* **Gestión Rápida de Catálogo:**
+  * Alta, baja y modificación de categorías y platos.
+  * Interruptor de disponibilidad en un solo toque (*switch*) para marcar productos como "Agotado" en segundos durante los horarios pico.
+  * Modificación instantánea de precios sin necesidad de reimprimir cartas físicas.
+* **Optimización Inteligente de Medios:**
+  * **Compresión automática a WebP:** Las fotos tomadas con celulares de alta gama (4 a 15 MB) son redimensionadas y convertidas en el navegador antes de subirse, dejándolas en ~150 KB sin pérdida perceptible de calidad.
+  * **Soporte para video corto:** Acepta clips de video de hasta 25 MB en formatos MP4, WebM y MOV.
+* **Personalización de Marca:**
+  * Elección de color de acento primario (HEX) para botones e indicadores.
+  * Subida de logo oficial y frase identificatoria (*tagline*).
+  * Selector del modo de visualización inicial por defecto (Reels o Lista).
+* **Generador de Código QR en Alta Resolución:**
+  * Genera el código QR vectorial vinculado a la URL del restaurante.
+  * Descarga directa en formato PNG de 1024x1024 px con el logo centralizado, listo para ser enviado a imprenta o colocado en las mesas.
+* **Acceso Rápido a WhatsApp:** Botón para copiar el enlace directo de pedidos y pegarlo en la biografía de Instagram o en el perfil de Google Maps del negocio.
 
 ---
 
-## 📱 Pantallas Principales
-
-| Ruta | Descripción |
-| :--- | :--- |
-| **`/`** | Landing page minimalista con estética tipo Apple explicando ambos flujos. |
-| **`/login`** | Inicio de sesión con Magic Link (sin contraseña). |
-| **`/admin`** | Panel del dueño protegido: alta de local, CRUD de categorías y productos, subida de fotos comprimidas en WebP, live preview en marco de iPhone, generador de QR descargable y botón para copiar link de WhatsApp. |
-| **`/p/[slug]`** | Menú público del local (ej: `/p/bar-de-prueba`). Ultrarrápido, mobile-first, buscador, selector de categorías, botón "Pedir en mesa" y botón "Pedir por WhatsApp". |
+### 💳 3. Suscripciones y Facturación Automatizada ($30 USD/mes)
+* **Pasarela Oficial de Stripe:** Integración completa con Stripe Subscriptions para el cobro mensual del servicio a los locales gastronómicos.
+* **Portal de Clientes Autónomo (Stripe Customer Portal):** Los dueños de los locales pueden actualizar su tarjeta de crédito o débito, visualizar su historial de pagos y descargar comprobantes y facturas fiscales oficiales de forma 100% autoservicio.
+* **Paywall Inteligente:** Control del estado del servicio (`active`, `past_due`, `canceled`, `inactive`) con avisos claros y bloqueo preventivo de funciones cuando el pago se encuentra vencido.
 
 ---
 
-## 🚀 Despliegue en Vercel
+### 🔒 4. Seguridad y Arquitectura Anti-Fraude
+* **Aislamiento Multi-Tenant con PostgreSQL RLS (Row Level Security):** Cada dueño solo tiene permisos de lectura y escritura sobre los datos y categorías que pertenecen a su local.
+* **Trigger Anti-Tampering:** Función de base de datos a nivel de PostgreSQL que detecta y aborta inmediatamente cualquier intento de modificar los campos de facturación desde el navegador.
+* **RLS Hard-Lock para Catálogo:** Bloqueo a nivel de motor de base de datos que prohíbe la creación o edición de productos si la suscripción del bar no está activa y vigente.
+* **Webhooks Criptográficos e Idempotencia:** Procesamiento de eventos de Stripe con validación obligatoria de firma digital y registro en tabla de deduplicación para prevenir ataques de repetición.
+* **Purga Inmediata de Caché:** Cuando un pago falla o una suscripción es dada de baja, el sistema tumba la versión pública cacheada de la carta en el acto, mostrando una pantalla limpia de local en pausa.
+* **Acceso Passwordless con Magic Link:** Autenticación moderna mediante enlaces seguros enviados al correo electrónico, protegiendo las cuentas contra ataques de fuerza bruta y evitando olvidos de contraseñas.
 
-1. Subí tu repositorio a GitHub.
-2. Importá el proyecto en [Vercel](https://vercel.com).
-3. En la sección **Environment Variables**, agregá:
-   * `NEXT_PUBLIC_SUPABASE_URL`: La URL de tu proyecto de Supabase.
-   * `NEXT_PUBLIC_SUPABASE_ANON_KEY`: La clave anónima pública de Supabase.
-   * `NEXT_PUBLIC_SITE_URL`: Tu dominio final de Vercel (ej: `https://menuqr.vercel.app`).
-4. Hacé clic en **Deploy**. ¡Tu SaaS estará funcionando en segundos con CDN global!
+---
+
+## 🏛️ Stack Tecnológico
+
+* **Frontend:** Next.js 14 (App Router), React 18, TailwindCSS, Lucide Icons, Canvas API para compresión WebP.
+* **Backend y Base de Datos:** Supabase (PostgreSQL 15, Row Level Security, Triggers PL/pgSQL, Storage S3-compatible).
+* **Autenticación:** Supabase Auth (Magic Links passwordless con tokens criptográficos PKCE).
+* **Pagos y Facturación:** Stripe API (Stripe Checkout, Webhooks, Customer Portal, Dynamic Payment Methods).
+* **Códigos QR:** QRCode React (generación vectorial escalable).
+* **PWA:** Service Workers, Web App Manifest y metaetiquetas para iOS y Android.
