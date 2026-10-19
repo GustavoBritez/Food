@@ -94,39 +94,51 @@ export async function createPreference(params: {
   }
 
   const endpoint = 'https://api.mercadopago.com/checkout/preferences';
+
+  const isLocalhost =
+    params.siteUrl.includes('localhost') ||
+    params.siteUrl.includes('127.0.0.1');
+
+  const payload: Record<string, unknown> = {
+    items: [
+      {
+        id: `cartaapp-${params.plan}`,
+        title: `Carta App - ${planConfig.name}`,
+        description: `Suscripción ${planConfig.name} (${planConfig.interval}) para ${params.storeName}`,
+        quantity: 1,
+        currency_id: planConfig.currency,
+        unit_price: planConfig.price,
+      },
+    ],
+    payer: params.userEmail ? { email: params.userEmail } : undefined,
+    back_urls: {
+      success: `${params.siteUrl}/admin?billing=success`,
+      failure: `${params.siteUrl}/admin?billing=failure`,
+      pending: `${params.siteUrl}/admin?billing=pending`,
+    },
+    external_reference: `${params.storeId}::${params.plan}`,
+    statement_descriptor: 'CARTA APP',
+    metadata: {
+      store_id: params.storeId,
+      store_slug: params.storeSlug,
+      plan: params.plan,
+    },
+  };
+
+  // Mercado Pago exige que back_url.success sea una URL pública HTTPS para auto_return.
+  // En localhost o desarrollo local debe omitirse para evitar el error 'auto_return invalid'.
+  if (!isLocalhost && params.siteUrl.startsWith('https://')) {
+    payload.auto_return = 'approved';
+    payload.notification_url = `${params.siteUrl}/api/mercadopago/webhook`;
+  }
+
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      items: [
-        {
-          id: `cartaapp-${params.plan}`,
-          title: `Carta App - ${planConfig.name}`,
-          description: `Suscripción ${planConfig.name} (${planConfig.interval}) para ${params.storeName}`,
-          quantity: 1,
-          currency_id: planConfig.currency,
-          unit_price: planConfig.price,
-        },
-      ],
-      payer: params.userEmail ? { email: params.userEmail } : undefined,
-      back_urls: {
-        success: `${params.siteUrl}/admin?billing=success`,
-        failure: `${params.siteUrl}/admin?billing=failure`,
-        pending: `${params.siteUrl}/admin?billing=pending`,
-      },
-      auto_return: 'approved',
-      external_reference: `${params.storeId}::${params.plan}`,
-      notification_url: `${params.siteUrl}/api/mercadopago/webhook`,
-      statement_descriptor: 'CARTA APP',
-      metadata: {
-        store_id: params.storeId,
-        store_slug: params.storeSlug,
-        plan: params.plan,
-      },
-    }),
+    body: JSON.stringify(payload),
   });
 
   const data = await response.json();
