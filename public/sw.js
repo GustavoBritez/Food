@@ -38,8 +38,12 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // No cachear API routes o autenticación de Supabase
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) {
+  // No cachear API routes, autenticación de Supabase ni el panel de administración
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/auth/') ||
+    url.pathname.startsWith('/admin')
+  ) {
     return;
   }
 
@@ -48,28 +52,35 @@ self.addEventListener('fetch', (event) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      return fetch(event.request).then((networkResponse) => {
-        // Cachear estáticos e iconos
-        if (
-          networkResponse.status === 200 &&
-          (url.pathname.startsWith('/icons/') ||
-            url.pathname.endsWith('.png') ||
-            url.pathname.endsWith('.svg') ||
-            url.pathname.endsWith('.woff2'))
-        ) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
+      return fetch(event.request)
+        .then((networkResponse) => {
+          // Cachear estáticos e iconos
+          if (
+            networkResponse.status === 200 &&
+            (url.pathname.startsWith('/icons/') ||
+              url.pathname.endsWith('.png') ||
+              url.pathname.endsWith('.svg') ||
+              url.pathname.endsWith('.woff2'))
+          ) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(async () => {
+          // Si no hay red y teníamos en caché la página inicial
+          if (event.request.mode === 'navigate') {
+            const fallback = await caches.match('/');
+            if (fallback) return fallback;
+          }
+          return new Response('Sin conexión', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
           });
-        }
-        return networkResponse;
-      }).catch(() => {
-        // Si no hay red y teníamos en caché la página inicial
-        if (event.request.mode === 'navigate') {
-          return caches.match('/');
-        }
-        return null;
-      });
+        });
     })
   );
 });

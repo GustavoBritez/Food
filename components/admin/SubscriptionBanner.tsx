@@ -53,6 +53,13 @@ export function SubscriptionBanner({ store }: Props) {
   }
 
   async function handleOpenPortal() {
+    if (!store.stripe_customer_id) {
+      setErrorMsg(
+        'Este local fue activado directamente en la base de datos (modo prueba). Como no pasó por el checkout de Stripe, aún no tiene una tarjeta ni facturas asociadas.'
+      );
+      return;
+    }
+
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -92,38 +99,61 @@ export function SubscriptionBanner({ store }: Props) {
   // B. SUSCRIPCIÓN ACTIVA
   if (status === 'active' || status === 'trialing') {
     return (
-      <div className="flex flex-col gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4 text-xs text-neutral-800 sm:flex-row sm:items-center sm:justify-between sm:text-sm">
-        <div className="flex items-start gap-3 sm:items-center">
-          <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5 sm:mt-0" />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-ink">Plan Carta App Pro</span>
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                $30 USD / mes · Activo
-              </span>
+      <div className="space-y-2">
+        <div className="flex flex-col gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4 text-xs text-neutral-800 sm:flex-row sm:items-center sm:justify-between sm:text-sm">
+          <div className="flex items-start gap-3 sm:items-center">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5 sm:mt-0" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-ink">Plan Carta App Pro</span>
+                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                  $30 USD / mes · Activo
+                </span>
+                {!store.stripe_customer_id && (
+                  <span className="rounded-full bg-neutral-200/70 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
+                    Activación manual
+                  </span>
+                )}
+              </div>
+              {periodEndFormatted && (
+                <p className="mt-0.5 text-xs text-neutral-500">
+                  Próxima renovación programada: <span className="font-medium">{periodEndFormatted}</span>
+                </p>
+              )}
             </div>
-            {periodEndFormatted && (
-              <p className="mt-0.5 text-xs text-neutral-500">
-                Próxima renovación programada: <span className="font-medium">{periodEndFormatted}</span>
-              </p>
-            )}
           </div>
+
+          <button
+            type="button"
+            onClick={handleOpenPortal}
+            disabled={loading}
+            className="inline-flex items-center justify-center gap-1.5 self-start rounded-xl border border-neutral-300 bg-white px-3.5 py-2 text-xs font-semibold text-neutral-700 shadow-sm transition hover:bg-neutral-50 disabled:opacity-60 sm:self-auto"
+          >
+            {loading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <CreditCard className="h-3.5 w-3.5 text-neutral-500" />
+            )}
+            <span>Gestionar Facturas / Tarjeta</span>
+            <ExternalLink className="h-3 w-3 text-neutral-400" />
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={handleOpenPortal}
-          disabled={loading}
-          className="inline-flex items-center justify-center gap-1.5 self-start rounded-xl border border-neutral-300 bg-white px-3.5 py-2 text-xs font-semibold text-neutral-700 shadow-sm transition hover:bg-neutral-50 disabled:opacity-60 sm:self-auto"
-        >
-          {loading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <CreditCard className="h-3.5 w-3.5 text-neutral-500" />
-          )}
-          <span>Gestionar Facturas / Tarjeta</span>
-          <ExternalLink className="h-3 w-3 text-neutral-400" />
-        </button>
+        {errorMsg && (
+          <div className="flex items-start justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 animate-fade-in">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+              <span>{errorMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setErrorMsg(null)}
+              className="text-amber-700 hover:text-amber-900 text-xs font-semibold"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
       </div>
     );
   }
