@@ -29,6 +29,15 @@ export default function LoginPage({ searchParams }: Props) {
             Te mandamos un link mágico a tu mail. Sin contraseñas.
           </p>
           <LoginForm next={next} error={error} />
+
+          <div className="mt-6 border-t border-black/10 pt-4 text-center">
+            <Link
+              href="/admin?demo=true"
+              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-emerald-600 hover:text-emerald-700 hover:underline"
+            >
+              👀 ¿Querés ver cómo es el panel? Probar Modo Demo
+            </Link>
+          </div>
         </div>
       </div>
     </main>

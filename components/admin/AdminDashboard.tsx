@@ -88,6 +88,25 @@ export function AdminDashboard({
 
   // --- Manejo de Categorías ---
   async function handleSaveCategory(data: { id?: string; name: string; order: number }) {
+    if (store.id === 'demo-store' || userId === 'demo-user') {
+      if (data.id) {
+        setCategories((prev) =>
+          prev
+            .map((c) => (c.id === data.id ? { ...c, name: data.name, order: data.order } : c))
+            .sort((a, b) => a.order - b.order)
+        );
+      } else {
+        const created: Category = {
+          id: `cat-${Date.now()}`,
+          store_id: store.id,
+          name: data.name,
+          order: data.order,
+        };
+        setCategories((prev) => [...prev, created].sort((a, b) => a.order - b.order));
+      }
+      return;
+    }
+
     if (data.id) {
       const { data: updated, error } = await supabase
         .from('categories')
@@ -124,6 +143,12 @@ export function AdminDashboard({
       : '¿Eliminar esta categoría?';
     if (!confirm(msg)) return;
 
+    if (store.id === 'demo-store' || userId === 'demo-user') {
+      setCategories((prev) => prev.filter((c) => c.id !== catId));
+      setProducts((prev) => prev.filter((p) => p.category_id !== catId));
+      return;
+    }
+
     const { error } = await supabase.from('categories').delete().eq('id', catId);
     if (error) {
       alert('No se pudo eliminar la categoría.');
@@ -136,6 +161,31 @@ export function AdminDashboard({
 
   // --- Manejo de Productos ---
   async function handleSaveProduct(data: Partial<Product> & { id?: string }) {
+    if (store.id === 'demo-store' || userId === 'demo-user') {
+      if (data.id) {
+        setProducts((prev) =>
+          prev
+            .map((p) => (p.id === data.id ? ({ ...p, ...data, price: Number(data.price) } as Product) : p))
+            .sort((a, b) => a.order - b.order)
+        );
+      } else {
+        const created: Product = {
+          id: `prod-${Date.now()}`,
+          store_id: store.id,
+          category_id: data.category_id!,
+          name: data.name!,
+          description: data.description ?? null,
+          price: Number(data.price),
+          photo_url: data.photo_url ?? null,
+          video_url: data.video_url ?? null,
+          available: data.available ?? true,
+          order: data.order ?? products.length,
+        };
+        setProducts((prev) => [...prev, created].sort((a, b) => a.order - b.order));
+      }
+      return;
+    }
+
     if (data.id) {
       const { id, ...rest } = data;
       const { data: updated, error } = await supabase
@@ -181,6 +231,7 @@ export function AdminDashboard({
     setProducts((prev) =>
       prev.map((p) => (p.id === product.id ? { ...p, available: nextVal } : p))
     );
+    if (store.id === 'demo-store' || userId === 'demo-user') return;
     const { error } = await supabase
       .from('products')
       .update({ available: nextVal })

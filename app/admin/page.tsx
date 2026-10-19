@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { DEMO_CATEGORIES, DEMO_PRODUCTS, DEMO_STORE } from '@/lib/demo';
 import { createClient } from '@/lib/supabase/server';
 import { AdminClientWrapper } from './AdminClientWrapper';
 import type { Category, Product, Store } from '@/lib/types';
@@ -11,7 +12,34 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminPage() {
+type Props = { searchParams?: Record<string, string | string[] | undefined> };
+
+export default async function AdminPage({ searchParams }: Props) {
+  // Modo demo para explorar el panel del dueño sin necesidad de login previo
+  const isDemo = searchParams?.demo === 'true';
+  if (isDemo) {
+    const demoStore: Store = {
+      id: 'demo-store',
+      name: 'Restaurante de Prueba',
+      slug: 'demo',
+      whatsapp: '5491128989237',
+      logo_url: null,
+      created_by: 'demo-user',
+      tagline: 'Cocina casera, burgers y tragos · Demo de Carta App',
+      accent_color: '#22c55e',
+      layout: 'feed',
+    };
+
+    return (
+      <AdminClientWrapper
+        initialStore={demoStore}
+        initialCategories={DEMO_CATEGORIES}
+        initialProducts={DEMO_PRODUCTS}
+        userId="demo-user"
+      />
+    );
+  }
+
   const supabase = createClient();
 
   const {

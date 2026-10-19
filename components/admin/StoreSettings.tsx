@@ -114,6 +114,23 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
       setSaving(true);
       setError('');
 
+      if (store.id === 'demo-store' || userId === 'demo-user') {
+        const updatedStore: Store = {
+          ...store,
+          name: cleanName,
+          tagline: tagline.trim() || null,
+          slug: cleanSlug,
+          whatsapp: cleanWp,
+          logo_url: logoUrl,
+          accent_color: accentColor,
+          layout,
+        };
+        onUpdate(updatedStore, store.slug !== cleanSlug ? store.slug : undefined);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+        return;
+      }
+
       const supabase = createClient();
       const { data, error: updateError } = await supabase
         .from('stores')
