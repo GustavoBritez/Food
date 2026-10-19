@@ -129,7 +129,7 @@ export function PwaInstallButton({
                   2
                 </span>
                 <span>
-                  Buscá y seleccioná <strong className="text-white">"Agregar a inicio"</strong> ⊞.
+                  Buscá y seleccioná <strong className="text-white">&quot;Agregar a inicio&quot;</strong> ⊞.
                 </span>
               </li>
               <li className="flex items-start gap-3 rounded-xl bg-white/5 p-3">
@@ -137,7 +137,7 @@ export function PwaInstallButton({
                   3
                 </span>
                 <span>
-                  Tocá <strong className="text-white">"Agregar"</strong> arriba a la derecha ¡y listo!
+                  Tocá <strong className="text-white">&quot;Agregar&quot;</strong> arriba a la derecha ¡y listo!
                 </span>
               </li>
             </ol>
