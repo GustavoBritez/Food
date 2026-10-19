@@ -405,19 +405,19 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {products.map((p) => (
                   <article
                     key={p.id}
                     className={cn(
-                      'group relative flex flex-col justify-between overflow-hidden rounded-3xl border transition duration-200 hover:shadow-2xl',
+                      'group relative flex flex-col justify-between overflow-hidden rounded-[22px] border transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1',
                       isDark
-                        ? 'border-white/10 bg-neutral-900/80 backdrop-blur-md hover:border-white/25 hover:shadow-black/50 text-white'
-                        : 'border-black/10 bg-white hover:border-black/20 hover:shadow-black/10 shadow-sm text-neutral-900'
+                        ? 'border-white/[0.08] bg-neutral-900/75 text-white shadow-[0_8px_30px_rgb(0,0,0,0.35)] hover:border-white/[0.15] backdrop-blur-xl'
+                        : 'border-black/[0.06] bg-white/85 text-neutral-900 shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:shadow-[0_16px_40px_rgb(0,0,0,0.12)] backdrop-blur-xl'
                     )}
                   >
-                    {/* Media: Foto o Video */}
-                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-800">
+                    {/* 1. ZONA MULTIMEDIA CON DIFUMINADO Y ESQUINAS SEPARADAS */}
+                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-800/20">
                       {p.video_url ? (
                         <video
                           src={p.video_url}
@@ -427,85 +427,105 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                           playsInline
                           onMouseEnter={(e) => e.currentTarget.play().catch(() => undefined)}
                           onMouseLeave={(e) => e.currentTarget.pause()}
-                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                         />
                       ) : p.photo_url ? (
                         <Image
                           src={p.photo_url}
                           alt={p.name}
                           fill
-                          sizes="(max-width: 1200px) 50vw, 25vw"
-                          className="object-cover transition duration-300 group-hover:scale-105"
+                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                          className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                         />
                       ) : (
                         <div
-                          className="h-full w-full"
+                          className="flex h-full w-full items-center justify-center"
                           style={{
                             background: 'radial-gradient(120% 90% at 30% 20%, var(--accent), #111 75%)',
                           }}
-                        />
+                        >
+                          <span className="text-xs opacity-40">Sin imagen</span>
+                        </div>
                       )}
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+                      {/* Degradado difuminado inferior para contraste y profundidad */}
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-90 transition-opacity duration-500 group-hover:opacity-100" />
 
-                      {/* Botón me gusta */}
+                      {/* Botón Favorito: Esquina SUPERIOR DERECHA */}
                       <button
                         type="button"
                         onClick={() => toggle(p.id)}
-                        className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-black/50 backdrop-blur-md text-white transition hover:scale-110 active:scale-95"
-                        aria-label="Me gusta"
+                        aria-label="Favorito"
+                        className="absolute right-2.5 top-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white backdrop-blur-md transition-all duration-300 hover:scale-110 hover:bg-black/55 active:scale-95"
                       >
                         <Heart className={cn('h-4 w-4', liked.has(p.id) && 'fill-red-500 text-red-500')} />
                       </button>
 
-                      {/* Precio */}
-                      <span className="absolute bottom-3 left-3 rounded-full bg-[var(--accent)] px-3 py-1 text-[14px] font-bold text-[var(--accent-fg)] shadow-lg">
+                      {/* Insignia de Precio: Esquina INFERIOR IZQUIERDA con Glassmorphism */}
+                      <div
+                        className="absolute bottom-2.5 left-2.5 z-10 max-w-[85%] truncate rounded-full border border-white/25 px-2.5 py-1 text-xs font-bold tracking-tight text-[var(--accent-fg)] shadow-lg backdrop-blur-md transition-transform duration-300 group-hover:scale-105"
+                        style={{
+                          backgroundColor: 'var(--accent)',
+                        }}
+                      >
                         {formatPrice(p.price)}
-                      </span>
+                      </div>
                     </div>
 
-                    {/* Descripción y Contenido */}
-                    <div className="flex flex-1 flex-col justify-between p-4">
+                    {/* 2. CUERPO DE LA TARJETA */}
+                    <div className="flex flex-1 flex-col justify-between p-3">
                       <div>
-                        <h3 className={cn('text-[17px] font-bold transition leading-snug', isDark ? 'text-white group-hover:text-emerald-400' : 'text-neutral-900 group-hover:text-emerald-600')}>
+                        <h3 className="line-clamp-2 text-[13px] font-bold leading-snug tracking-tight sm:text-sm">
                           {p.name}
                         </h3>
                         {p.description && (
-                          <p className={cn('mt-1.5 text-[13px] line-clamp-2 leading-relaxed', isDark ? 'text-white/70' : 'text-neutral-600')}>
+                          <p
+                            className={cn(
+                              'mt-1 line-clamp-2 text-[11px] leading-relaxed',
+                              isDark ? 'text-neutral-400' : 'text-neutral-500'
+                            )}
+                          >
                             {p.description}
                           </p>
                         )}
                       </div>
 
-                      {/* Botones de acción directos */}
-                      <div className={cn('mt-4 grid grid-cols-2 gap-2 pt-2 border-t', isDark ? 'border-white/5' : 'border-black/5')}>
+                      {/* 3. ACCIONES COMPACTAS SIN SUPERPOSICIÓN */}
+                      <div className="mt-3 flex items-center gap-1.5 pt-1">
+                        {/* Botón Principal: En mesa (ocupa el ancho disponible sin cortar texto) */}
                         <button
                           type="button"
                           onClick={() => actions.orderAtTable(p)}
                           className={cn(
-                            'btn relative h-10 text-[12.5px] font-semibold transition',
+                            'flex h-8 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-xl px-2 text-[11px] font-semibold text-white shadow-sm transition-all duration-300 hover:brightness-110 active:scale-95',
                             store.button_style === 'accent'
-                              ? 'bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-105 shadow'
+                              ? 'bg-[var(--accent)] text-[var(--accent-fg)]'
                               : store.button_style === 'whatsapp'
-                              ? 'bg-whatsapp text-white hover:brightness-95 shadow'
+                              ? 'bg-whatsapp text-white'
                               : isDark
-                              ? 'bg-white text-black hover:bg-white/90 shadow'
-                              : 'bg-neutral-900 text-white hover:bg-black shadow'
+                              ? 'bg-white text-black'
+                              : 'bg-neutral-900 text-white'
                           )}
+                          title="Pedir en mesa"
                         >
-                          <HandPlatter className="h-3.5 w-3.5" /> En mesa
+                          <HandPlatter className="h-3 w-3 shrink-0" />
+                          <span>+ En mesa</span>
                           {actions.qtyOf(p.id) > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-[var(--accent)] px-1 text-[11px] font-bold text-[var(--accent-fg)] shadow">
+                            <span className="ml-1 grid h-4 min-w-4 place-items-center rounded-full bg-white/30 px-1 text-[10px] font-bold">
                               {actions.qtyOf(p.id)}
                             </span>
                           )}
                         </button>
+
+                        {/* Botón WhatsApp: Botón con solo ícono (Evita que el texto 'WhatsApp' se corte) */}
                         <button
                           type="button"
                           onClick={() => actions.orderOneByWhatsApp(p)}
-                          className="btn h-10 bg-whatsapp text-[12.5px] font-semibold text-white hover:brightness-95 shadow"
+                          title="Pedir por WhatsApp"
+                          aria-label="Pedir por WhatsApp"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#25D366] text-white shadow-sm transition-all duration-300 hover:scale-105 hover:bg-[#20bd5a] active:scale-95"
                         >
-                          <WhatsAppIcon /> WhatsApp
+                          <WhatsAppIcon className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </div>

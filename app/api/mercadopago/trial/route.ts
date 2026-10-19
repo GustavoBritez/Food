@@ -29,14 +29,7 @@ export async function POST() {
     }
 
     // Si ya consumió el trial previamente o ya tiene suscripción activa
-    if (store.subscription_status === 'active') {
-      return NextResponse.json(
-        { error: 'Tu local ya cuenta con una suscripción activa.' },
-        { status: 400 }
-      );
-    }
-
-    if (store.trial_end && new Date(store.trial_end).getTime() < Date.now()) {
+    if (store.trial_end !== null || store.subscription_status !== 'inactive') {
       return NextResponse.json(
         { error: 'El mes de prueba gratuito ya fue utilizado previamente para este local. Elegí el Plan Mensual o Anual para continuar.' },
         { status: 400 }

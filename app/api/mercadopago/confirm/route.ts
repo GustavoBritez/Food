@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     const admin = createAdminClient();
     const { data: store } = await admin
       .from('stores')
-      .select('id, slug, subscription_status')
+      .select('id, slug, subscription_status, mp_payment_id, current_period_end')
       .eq('created_by', user.id)
       .maybeSingle();
 
@@ -67,10 +67,48 @@ export async function POST(req: Request) {
       });
     }
 
-    let plan = paymentToProcess.metadata?.plan || 'monthly';
-    if (!paymentToProcess.metadata?.plan && paymentToProcess.external_reference) {
-      const parts = paymentToProcess.external_reference.split('::');
-      if (parts[1]) plan = parts[1];
+    // 1. Validar que el pago pertenezca ESTRICTAMENTE a este local
+    const matchesStore =
+      paymentToProcess.metadata?.store_id === store.id ||
+      paymentToProcess.external_reference?.startsWith(store.id);
+
+    if (!matchesStore) {
+      return NextResponse.json(
+        { error: 'El comprobante de pago no corresponde a este local gastronómico.' },
+        { status: 403 }
+      );
+    }
+
+    // 2. Determinar plan y validar monto pagado
+    let plan: 'monthly' | 'yearly' = 'monthly';
+    if (
+      paymentToProcess.metadata?.plan === 'yearly' ||
+      paymentToProcess.external_reference?.endsWith('::yearly')
+    ) {
+      plan = 'yearly';
+    }
+
+    const expectedAmount = plan === 'yearly' ? 500000 : 50000;
+    if (Number(paymentToProcess.transaction_amount) < expectedAmount) {
+      return NextResponse.json(
+        { error: 'El importe abonado no coincide con el valor del plan seleccionado.' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Idempotencia estricta: si ya se procesó este payment_id, no sumar días duplicados
+    if (
+      store.mp_payment_id === String(paymentToProcess.id) &&
+      store.subscription_status === 'active'
+    ) {
+      return NextResponse.json({
+        updated: false,
+        alreadyProcessed: true,
+        subscription_status: 'active',
+        plan_type: plan,
+        payment_id: paymentToProcess.id,
+        current_period_end: store.current_period_end,
+      });
     }
 
     const daysToAdd = plan === 'yearly' ? 365 : 30;

@@ -63,6 +63,35 @@ export async function POST(req: Request) {
           }
 
           if (storeId) {
+            // Validar que el pago corresponda a esta tienda
+            const matches =
+              payment.metadata?.store_id === storeId ||
+              payment.external_reference?.startsWith(storeId);
+
+            if (!matches) {
+              return NextResponse.json({ received: true, ignored: 'Store mismatch' }, { status: 200 });
+            }
+
+            // Validar monto abonado
+            const expectedAmount = plan === 'yearly' ? 500000 : 50000;
+            if (Number(payment.transaction_amount) < expectedAmount) {
+              return NextResponse.json({ received: true, ignored: 'Amount mismatch' }, { status: 200 });
+            }
+
+            // Idempotencia: si ya tiene este mp_payment_id asignado, no sumar días duplicados
+            const { data: currentStore } = await admin
+              .from('stores')
+              .select('id, slug, mp_payment_id, subscription_status')
+              .eq('id', storeId)
+              .maybeSingle();
+
+            if (
+              currentStore?.mp_payment_id === String(payment.id) &&
+              currentStore?.subscription_status === 'active'
+            ) {
+              return NextResponse.json({ received: true, alreadyProcessed: true }, { status: 200 });
+            }
+
             const daysToAdd = plan === 'yearly' ? 365 : 30;
             const periodEnd = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000).toISOString();
 

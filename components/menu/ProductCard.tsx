@@ -58,28 +58,28 @@ export function ProductCard({
       </div>
 
       {/* Botones de acción directos */}
-      <div className={cn('mt-3.5 grid grid-cols-2 gap-2 pt-2 border-t', isDark ? 'border-white/10' : 'border-black/[0.04]')}>
+      <div className={cn('mt-3.5 flex items-center gap-1.5 pt-2 border-t', isDark ? 'border-white/10' : 'border-black/[0.04]')}>
         <button
           type="button"
           onClick={() => onOrderAtTable(product)}
           className={cn(
-            'btn relative h-9 px-2 text-[12px] sm:text-[13px] font-semibold gap-1.5 min-w-0 transition',
+            'flex h-8.5 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 text-[12px] font-semibold transition shadow-sm',
             buttonStyle === 'accent'
-              ? 'bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-105 shadow-sm'
+              ? 'bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-105'
               : buttonStyle === 'whatsapp'
-              ? 'bg-whatsapp text-white hover:brightness-95 shadow-sm'
+              ? 'bg-whatsapp text-white hover:brightness-95'
               : isDark
-              ? 'bg-white text-black hover:bg-white/90 shadow-sm'
-              : 'bg-ink text-white hover:bg-black shadow-sm'
+              ? 'bg-white text-black hover:bg-white/90'
+              : 'bg-ink text-white hover:bg-black'
           )}
           title="Pedir en mesa"
         >
           <HandPlatter className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">Pedir en mesa</span>
+          <span>+ En mesa</span>
           {qty > 0 && (
             <span
               key={qty}
-              className="absolute -right-1 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold text-[var(--accent-fg)] shadow ring-1 ring-black/10 animate-pop"
+              className="ml-1 grid h-4 min-w-4 place-items-center rounded-full bg-white/30 px-1 text-[10px] font-bold ring-1 ring-black/10 animate-pop"
             >
               {qty}
             </span>
@@ -88,16 +88,11 @@ export function ProductCard({
         <button
           type="button"
           onClick={() => onOrderWhatsApp(product)}
-          className={cn(
-            'btn h-9 px-2 text-[12px] sm:text-[13px] font-medium gap-1.5 min-w-0 transition shadow-sm',
-            isDark
-              ? 'bg-whatsapp/20 text-whatsapp hover:bg-whatsapp/30 border border-whatsapp/30'
-              : 'bg-whatsapp/10 text-whatsapp-dark hover:bg-whatsapp/15'
-          )}
+          className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-xl bg-[#25D366] text-white shadow-sm transition hover:scale-105 active:scale-95"
           title="Pedir por WhatsApp"
+          aria-label="Pedir por WhatsApp"
         >
-          <WhatsAppIcon className="h-3.5 w-3.5 shrink-0 text-whatsapp" />
-          <span className="truncate">Pedir WhatsApp</span>
+          <WhatsAppIcon className="h-4 w-4 shrink-0" />
         </button>
       </div>
     </article>

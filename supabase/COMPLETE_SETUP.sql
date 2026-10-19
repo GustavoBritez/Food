@@ -35,7 +35,7 @@ create table if not exists public.stores (
   accent_color            text not null default '#22c55e' check (accent_color ~ '^#[0-9a-fA-F]{6}$'),
   layout                  text not null default 'feed' check (layout in ('feed', 'list', 'grid')),
   theme                   text not null default 'dark' check (theme in ('dark', 'light')),
-  bg_color                text,
+  bg_color                text check (bg_color is null or bg_color ~ '^#[0-9a-fA-F]{6}$'),
   button_style            text not null default 'accent' check (button_style in ('accent', 'whatsapp', 'monochrome')),
   created_by              uuid references auth.users (id) on delete cascade default auth.uid(),
   created_at              timestamptz not null default now(),
@@ -54,6 +54,9 @@ create table if not exists public.stores (
 alter table public.stores add column if not exists cover_url text;
 alter table public.stores add column if not exists theme text not null default 'dark';
 alter table public.stores add column if not exists bg_color text;
+alter table public.stores drop constraint if exists stores_bg_color_check;
+alter table public.stores add constraint stores_bg_color_check
+  check (bg_color is null or bg_color ~ '^#[0-9a-fA-F]{6}$');
 alter table public.stores add column if not exists button_style text not null default 'accent';
 alter table public.stores add column if not exists plan_type text check (plan_type in ('trial', 'monthly', 'yearly'));
 alter table public.stores add column if not exists trial_end timestamptz;
@@ -225,11 +228,14 @@ alter table public.categories            enable row level security;
 alter table public.products              enable row level security;
 alter table public.mp_webhook_events     enable row level security;
 
--- Blindaje de privacidad a nivel de columna: anon no puede leer identificadores de Mercado Pago
-revoke select (mp_payment_id, mp_preference_id, mp_merchant_order_id) on table public.stores from anon;
+-- Permiso explícito de lectura para PostgREST / Supabase
+grant select on table public.stores to anon, authenticated;
+grant select on table public.categories to anon, authenticated;
+grant select on table public.products to anon, authenticated;
+grant select on table public.mp_webhook_events to authenticated;
 
 -- STORES:
--- Lectura pública para comensales (solo columnas no revocadas)
+-- Lectura pública para comensales
 drop policy if exists "stores: lectura publica" on public.stores;
 create policy "stores: lectura publica" on public.stores
   for select using (true);
@@ -247,11 +253,11 @@ create policy "stores: edicion del dueño" on public.stores
   using (created_by = (select auth.uid()))
   with check (created_by = (select auth.uid()));
 
--- Eliminación solo del dueño
+-- Eliminación solo del dueño (bloqueado si ya utilizó el mes de prueba para evitar fraude y reseteos)
 drop policy if exists "stores: baja del dueño" on public.stores;
 create policy "stores: baja del dueño" on public.stores
   for delete to authenticated
-  using (created_by = (select auth.uid()));
+  using (created_by = (select auth.uid()) and trial_end is null);
 
 -- CATEGORIES:
 -- Lectura pública
