@@ -15,6 +15,9 @@ export const DEMO_STORE: PublicStore = {
   tagline: 'Cocina casera, burgers y tragos · Demo de Carta App',
   accent_color: '#22c55e',
   layout: 'feed',
+  theme: 'dark',
+  bg_color: '#0a0a0a',
+  button_style: 'accent',
   subscription_status: 'active',
   current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
 };

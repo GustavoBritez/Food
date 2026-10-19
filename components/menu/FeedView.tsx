@@ -22,7 +22,7 @@ import {
 import { PwaInstallButton } from '@/components/PwaInstallButton';
 import { Sheet } from '@/components/ui/Sheet';
 import { WhatsAppIcon } from '@/components/WhatsAppIcon';
-import type { Product, PublicStore } from '@/lib/types';
+import type { ButtonStyle, Product, PublicStore } from '@/lib/types';
 import { whatsappUrl } from '@/lib/order';
 import { cn, formatPrice, normalizeText } from '@/lib/utils';
 import type { MenuActions, MenuSection } from './PublicMenu';
@@ -215,10 +215,26 @@ export function FeedView({ store, sections, actions, preview }: Props) {
     );
   }
 
+  const isDark = store.theme === 'light' ? false : true;
+  const bgColor = store.bg_color || (isDark ? '#0a0a0a' : '#ffffff');
+
   return (
-    <div className="relative h-full min-h-dvh w-full overflow-hidden bg-neutral-950 text-white select-none">
+    <div
+      className={cn(
+        'relative h-full min-h-dvh w-full overflow-hidden select-none transition-colors duration-200',
+        isDark ? 'text-white' : 'text-neutral-900'
+      )}
+      style={{ backgroundColor: bgColor }}
+    >
       {/* Barra superior de navegación (adaptativa para Celular y PC a lo ancho) */}
-      <header className="fixed inset-x-0 top-0 z-30 bg-gradient-to-b from-black/90 via-black/60 to-transparent pb-6 backdrop-blur-[2px]">
+      <header
+        className={cn(
+          'fixed inset-x-0 top-0 z-30 pb-6 backdrop-blur-[2px] transition-colors duration-200',
+          isDark
+            ? 'bg-gradient-to-b from-black/90 via-black/60 to-transparent text-white'
+            : 'bg-gradient-to-b from-white/95 via-white/80 to-transparent text-neutral-900 border-b border-black/5'
+        )}
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pt-3">
           {/* Logo y Nombre del comercio */}
           <div className="flex items-center gap-2.5 min-w-0">
@@ -236,8 +252,10 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                 )}
               </span>
               <div className="min-w-0 hidden sm:block">
-                <p className="truncate text-[14px] font-bold text-white group-hover:text-emerald-400 transition">{store.name}</p>
-                {store.tagline && <p className="truncate text-[11px] text-white/60">{store.tagline}</p>}
+                <p className={cn('truncate text-[14px] font-bold transition', isDark ? 'text-white group-hover:text-emerald-400' : 'text-neutral-900 group-hover:text-emerald-600')}>
+                  {store.name}
+                </p>
+                {store.tagline && <p className={cn('truncate text-[11px]', isDark ? 'text-white/60' : 'text-neutral-500')}>{store.tagline}</p>}
               </div>
             </button>
           </div>
@@ -250,7 +268,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                 type="button"
                 data-cat={category.id}
                 onClick={() => {
-                  if (desktopMode === 'grid') {
+                  if (desktopMode === 'grid' || store.layout === 'grid') {
                     const el = document.getElementById(`cat-sec-${category.id}`);
                     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   } else {
@@ -260,8 +278,14 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                 className={cn(
                   'h-8 shrink-0 rounded-full px-3.5 text-[12.5px] font-semibold backdrop-blur-md transition active:scale-95',
                   activeCat === category.id
-                    ? 'bg-white text-black shadow-md'
-                    : 'bg-white/10 text-white/90 ring-1 ring-white/10 hover:bg-white/20'
+                    ? store.button_style === 'accent'
+                      ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-md'
+                      : isDark
+                      ? 'bg-white text-black shadow-md'
+                      : 'bg-neutral-900 text-white shadow-md'
+                    : isDark
+                    ? 'bg-white/10 text-white/90 ring-1 ring-white/10 hover:bg-white/20'
+                    : 'bg-black/5 text-neutral-700 ring-1 ring-black/10 hover:bg-black/10'
                 )}
               >
                 {category.name}
@@ -275,7 +299,10 @@ export function FeedView({ store, sections, actions, preview }: Props) {
             <button
               type="button"
               onClick={() => setGridOpen(true)}
-              className="glass-btn"
+              className={cn(
+                'grid h-9 w-9 place-items-center rounded-full backdrop-blur-md transition active:scale-95',
+                isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-black/5 text-neutral-800 hover:bg-black/10'
+              )}
               title="Buscar platos y ver catálogo"
               aria-label="Buscar"
             >
@@ -283,30 +310,39 @@ export function FeedView({ store, sections, actions, preview }: Props) {
             </button>
 
             {/* Selector de modo en PC (Catálogo Ancho vs Reels) */}
-            <div className="hidden md:flex items-center rounded-full bg-white/10 p-0.5 border border-white/15">
-              <button
-                type="button"
-                onClick={() => setDesktopMode('grid')}
-                className={cn(
-                  'flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-medium transition',
-                  desktopMode === 'grid' ? 'bg-white text-black shadow-sm font-semibold' : 'text-white/80 hover:text-white'
-                )}
-                title="Ver catálogo a lo ancho"
-              >
-                <LayoutGrid className="h-3.5 w-3.5" /> Catálogo
-              </button>
-              <button
-                type="button"
-                onClick={() => setDesktopMode('reels')}
-                className={cn(
-                  'flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-medium transition',
-                  desktopMode === 'reels' ? 'bg-white text-black shadow-sm font-semibold' : 'text-white/80 hover:text-white'
-                )}
-                title="Ver en formato Reels vertical"
-              >
-                <Film className="h-3.5 w-3.5" /> Reels
-              </button>
-            </div>
+            {store.layout !== 'grid' && (
+              <div className={cn(
+                'hidden md:flex items-center rounded-full p-0.5 border',
+                isDark ? 'bg-white/10 border-white/15' : 'bg-black/5 border-black/10'
+              )}>
+                <button
+                  type="button"
+                  onClick={() => setDesktopMode('grid')}
+                  className={cn(
+                    'flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-medium transition',
+                    desktopMode === 'grid'
+                      ? (isDark ? 'bg-white text-black shadow-sm font-semibold' : 'bg-neutral-900 text-white shadow-sm font-semibold')
+                      : (isDark ? 'text-white/80 hover:text-white' : 'text-neutral-600 hover:text-neutral-900')
+                  )}
+                  title="Ver catálogo a lo ancho"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" /> Catálogo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDesktopMode('reels')}
+                  className={cn(
+                    'flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-medium transition',
+                    desktopMode === 'reels'
+                      ? (isDark ? 'bg-white text-black shadow-sm font-semibold' : 'bg-neutral-900 text-white shadow-sm font-semibold')
+                      : (isDark ? 'text-white/80 hover:text-white' : 'text-neutral-600 hover:text-neutral-900')
+                  )}
+                  title="Ver en formato Reels vertical"
+                >
+                  <Film className="h-3.5 w-3.5" /> Reels
+                </button>
+              </div>
+            )}
 
             {/* Botón PWA para instalar la app */}
             <PwaInstallButton variant="glass" label="App" className="hidden sm:inline-flex" />
@@ -316,7 +352,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
               <button
                 type="button"
                 onClick={actions.openCart}
-                className="glass-btn relative bg-[var(--accent)] text-[var(--accent-fg)] border-none font-bold"
+                className="glass-btn relative bg-[var(--accent)] text-[var(--accent-fg)] border-none font-bold shadow-lg"
                 aria-label="Ver mi pedido"
               >
                 <ShoppingBag className="h-4 w-4" />
@@ -330,7 +366,10 @@ export function FeedView({ store, sections, actions, preview }: Props) {
             <button
               type="button"
               onClick={() => setInfoOpen(true)}
-              className="glass-btn"
+              className={cn(
+                'grid h-9 w-9 place-items-center rounded-full backdrop-blur-md transition active:scale-95',
+                isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-black/5 text-neutral-800 hover:bg-black/10'
+              )}
               aria-label="Información del local"
             >
               <Menu className="h-4 w-4" />
@@ -345,19 +384,23 @@ export function FeedView({ store, sections, actions, preview }: Props) {
           2) VISTA EN PC (Catálogo ancho a lo ancho O Modo Reels centrado con blur)
          ========================================================================= */}
 
-      {/* A) MODO CATÁLOGO ANCHO PARA PC (visible en desktop cuando desktopMode === 'grid') */}
+      {/* A) MODO CATÁLOGO ANCHO PARA PC O MÓVIL SI LAYOUT ES GRID */}
       <div
         className={cn(
-          'hidden md:block h-full min-h-dvh overflow-y-auto overscroll-contain pt-24 pb-16 px-6',
-          desktopMode === 'grid' && !preview ? 'md:block' : 'md:hidden'
+          'h-full min-h-dvh overflow-y-auto overscroll-contain pt-24 pb-16 px-4 md:px-6 transition-colors duration-200',
+          store.layout === 'grid'
+            ? 'block'
+            : desktopMode === 'grid' && !preview
+            ? 'hidden md:block'
+            : 'hidden'
         )}
       >
         <div className="mx-auto max-w-7xl">
           {sections.map(({ category, products }) => (
             <section key={category.id} id={`cat-sec-${category.id}`} className="mb-10">
-              <div className="flex items-center gap-3 border-b border-white/10 pb-3 mb-5">
-                <h2 className="text-xl font-bold tracking-tight text-white">{category.name}</h2>
-                <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[12px] font-medium text-white/60">
+              <div className={cn('flex items-center gap-3 border-b pb-3 mb-5', isDark ? 'border-white/10' : 'border-black/10')}>
+                <h2 className={cn('text-xl font-bold tracking-tight', isDark ? 'text-white' : 'text-neutral-900')}>{category.name}</h2>
+                <span className={cn('rounded-full px-2.5 py-0.5 text-[12px] font-medium', isDark ? 'bg-white/10 text-white/60' : 'bg-black/5 text-neutral-600')}>
                   {products.length} platos
                 </span>
               </div>
@@ -366,7 +409,12 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                 {products.map((p) => (
                   <article
                     key={p.id}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-neutral-900/80 backdrop-blur-md transition duration-200 hover:border-white/25 hover:shadow-2xl hover:shadow-black/50"
+                    className={cn(
+                      'group relative flex flex-col justify-between overflow-hidden rounded-3xl border transition duration-200 hover:shadow-2xl',
+                      isDark
+                        ? 'border-white/10 bg-neutral-900/80 backdrop-blur-md hover:border-white/25 hover:shadow-black/50 text-white'
+                        : 'border-black/10 bg-white hover:border-black/20 hover:shadow-black/10 shadow-sm text-neutral-900'
+                    )}
                   >
                     {/* Media: Foto o Video */}
                     <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-800">
@@ -419,22 +467,31 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                     {/* Descripción y Contenido */}
                     <div className="flex flex-1 flex-col justify-between p-4">
                       <div>
-                        <h3 className="text-[17px] font-bold text-white group-hover:text-emerald-400 transition leading-snug">
+                        <h3 className={cn('text-[17px] font-bold transition leading-snug', isDark ? 'text-white group-hover:text-emerald-400' : 'text-neutral-900 group-hover:text-emerald-600')}>
                           {p.name}
                         </h3>
                         {p.description && (
-                          <p className="mt-1.5 text-[13px] text-white/70 line-clamp-2 leading-relaxed">
+                          <p className={cn('mt-1.5 text-[13px] line-clamp-2 leading-relaxed', isDark ? 'text-white/70' : 'text-neutral-600')}>
                             {p.description}
                           </p>
                         )}
                       </div>
 
                       {/* Botones de acción directos */}
-                      <div className="mt-4 grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
+                      <div className={cn('mt-4 grid grid-cols-2 gap-2 pt-2 border-t', isDark ? 'border-white/5' : 'border-black/5')}>
                         <button
                           type="button"
                           onClick={() => actions.orderAtTable(p)}
-                          className="btn relative h-10 bg-white text-[12.5px] font-semibold text-black hover:bg-white/90"
+                          className={cn(
+                            'btn relative h-10 text-[12.5px] font-semibold transition',
+                            store.button_style === 'accent'
+                              ? 'bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-105 shadow'
+                              : store.button_style === 'whatsapp'
+                              ? 'bg-whatsapp text-white hover:brightness-95 shadow'
+                              : isDark
+                              ? 'bg-white text-black hover:bg-white/90 shadow'
+                              : 'bg-neutral-900 text-white hover:bg-black shadow'
+                          )}
                         >
                           <HandPlatter className="h-3.5 w-3.5" /> En mesa
                           {actions.qtyOf(p.id) > 0 && (
@@ -446,7 +503,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                         <button
                           type="button"
                           onClick={() => actions.orderOneByWhatsApp(p)}
-                          className="btn h-10 bg-whatsapp text-[12.5px] font-semibold text-white hover:brightness-95"
+                          className="btn h-10 bg-whatsapp text-[12.5px] font-semibold text-white hover:brightness-95 shadow"
                         >
                           <WhatsAppIcon /> WhatsApp
                         </button>
@@ -458,8 +515,8 @@ export function FeedView({ store, sections, actions, preview }: Props) {
             </section>
           ))}
 
-          <footer className="mt-12 border-t border-white/10 pt-6 text-center text-[12px] text-white/50">
-            {DISCLAIMER} · Menú creado con <strong className="text-white">Carta App</strong>
+          <footer className={cn('mt-12 border-t pt-6 text-center text-[12px]', isDark ? 'border-white/10 text-white/50' : 'border-black/10 text-neutral-500')}>
+            {DISCLAIMER} · Menú creado con <strong className={isDark ? 'text-white' : 'text-neutral-900'}>Carta App</strong>
           </footer>
         </div>
       </div>
@@ -468,7 +525,11 @@ export function FeedView({ store, sections, actions, preview }: Props) {
       <div
         className={cn(
           'h-full min-h-dvh w-full overflow-hidden',
-          desktopMode === 'grid' && !preview ? 'md:hidden' : 'block'
+          store.layout === 'grid'
+            ? 'hidden'
+            : desktopMode === 'grid' && !preview
+            ? 'md:hidden'
+            : 'block'
         )}
       >
         {/* Ambient background blur en PC */}
@@ -501,6 +562,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
               onLike={() => toggle(slide.product.id)}
               onShare={() => share(slide.product)}
               actions={actions}
+              buttonStyle={store.button_style}
             />
           ))}
 
@@ -806,9 +868,21 @@ type SlideProps = {
   onLike: () => void;
   onShare: () => void;
   actions: MenuActions;
+  buttonStyle?: ButtonStyle;
 };
 
-function FeedSlide({ index, product: p, active, near, liked, qty, onLike, onShare, actions }: SlideProps) {
+function FeedSlide({
+  index,
+  product: p,
+  active,
+  near,
+  liked,
+  qty,
+  onLike,
+  onShare,
+  actions,
+  buttonStyle = 'accent',
+}: SlideProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
 
@@ -908,7 +982,14 @@ function FeedSlide({ index, product: p, active, near, liked, qty, onLike, onShar
           <button
             type="button"
             onClick={() => actions.orderAtTable(p)}
-            className="btn relative h-11 bg-white text-[13px] font-bold text-black hover:bg-white/90 shadow-lg"
+            className={cn(
+              'btn relative h-11 text-[13px] font-bold shadow-lg transition',
+              buttonStyle === 'accent'
+                ? 'bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-105'
+                : buttonStyle === 'whatsapp'
+                ? 'bg-whatsapp text-white hover:brightness-95'
+                : 'bg-white text-black hover:bg-white/90'
+            )}
           >
             <HandPlatter className="h-4 w-4" /> Pedir en mesa
             {qty > 0 && (

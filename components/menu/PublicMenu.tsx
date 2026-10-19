@@ -41,7 +41,19 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
   const [cartOpen, setCartOpen] = useState(false);
 
   const accent = HEX_REGEX.test(store.accent_color ?? '') ? store.accent_color : DEFAULT_ACCENT;
-  const layout = store.layout === 'list' ? 'list' : 'feed';
+  const layout = store.layout === 'list' ? 'list' : store.layout === 'grid' ? 'grid' : 'feed';
+
+  const isDark =
+    store.theme === 'light'
+      ? false
+      : store.theme === 'dark'
+      ? true
+      : layout !== 'list';
+
+  const customBg = store.bg_color && HEX_REGEX.test(store.bg_color) ? store.bg_color : null;
+  const defaultBg = isDark ? '#0a0a0a' : '#ffffff';
+  const bgColor = customBg || defaultBg;
+  const textColor = isDark ? '#ffffff' : '#111827';
 
   const sections = useMemo<MenuSection[]>(
     () =>
@@ -102,7 +114,12 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
     total,
   };
 
-  const cssVars = { '--accent': accent, '--accent-fg': readableTextColor(accent) } as CSSProperties;
+  const cssVars = {
+    '--accent': accent,
+    '--accent-fg': readableTextColor(accent),
+    '--menu-bg': bgColor,
+    '--menu-text': textColor,
+  } as CSSProperties;
   // En preview (marco admin) el sheet queda contenido dentro del marco; en la web real se abre como modal/sheet
   const sheetProps = preview
     ? { contained: true, forceMobile: true }
@@ -111,10 +128,13 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
   return (
     <div
       className={cn(
-        'flex h-full min-h-dvh w-full justify-center overflow-hidden',
-        layout === 'feed' ? 'bg-neutral-950 text-white' : 'bg-neutral-50 text-ink'
+        'flex h-full min-h-dvh w-full justify-center overflow-hidden transition-colors duration-200',
+        isDark ? 'text-white' : 'text-neutral-900'
       )}
-      style={cssVars}
+      style={{
+        ...cssVars,
+        backgroundColor: bgColor,
+      }}
     >
       <div
         className={cn(
@@ -122,10 +142,10 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
           preview ? 'max-w-[480px]' : ''
         )}
       >
-        {layout === 'feed' ? (
-          <FeedView store={store} sections={sections} actions={actions} preview={preview} />
-        ) : (
+        {layout === 'list' ? (
           <ListView store={store} sections={sections} actions={actions} preview={preview} />
+        ) : (
+          <FeedView store={store} sections={sections} actions={actions} preview={preview} />
         )}
 
         {/* Modal / Sheet del Carrito */}
@@ -174,11 +194,18 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
                     setCartOpen(false);
                     setWaiterOpen(true);
                   }}
-                  className="btn-primary h-12"
+                  className={cn(
+                    'btn h-12 font-semibold shadow-md transition',
+                    store.button_style === 'accent'
+                      ? 'bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-105'
+                      : store.button_style === 'whatsapp'
+                      ? 'bg-whatsapp text-white hover:brightness-95'
+                      : 'bg-ink text-white hover:bg-black'
+                  )}
                 >
                   <HandPlatter className="h-4 w-4" /> Mostrar al mozo
                 </button>
-                <button type="button" onClick={sendCartByWhatsApp} className="btn-whatsapp h-12">
+                <button type="button" onClick={sendCartByWhatsApp} className="btn-whatsapp h-12 shadow-md">
                   <WhatsAppIcon /> Enviar pedido completo por WhatsApp
                 </button>
                 <button
@@ -222,7 +249,18 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
           </ul>
 
           <div className="mt-5 grid gap-2.5">
-            <button type="button" onClick={() => setWaiterOpen(false)} className="btn-primary h-12">
+            <button
+              type="button"
+              onClick={() => setWaiterOpen(false)}
+              className={cn(
+                'btn h-12 font-semibold shadow-md transition',
+                store.button_style === 'accent'
+                  ? 'bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-105'
+                  : store.button_style === 'whatsapp'
+                  ? 'bg-whatsapp text-white hover:brightness-95'
+                  : 'bg-ink text-white hover:bg-black'
+              )}
+            >
               Seguir mirando el menú
             </button>
             <button

@@ -29,6 +29,9 @@ export default async function AdminPage({ searchParams }: Props) {
       tagline: 'Cocina casera, burgers y tragos · Demo de Carta App',
       accent_color: '#22c55e',
       layout: 'feed',
+      theme: 'dark',
+      bg_color: '#0a0a0a',
+      button_style: 'accent',
     };
 
     return (

@@ -36,6 +36,9 @@ body {
   .icon-btn {
     @apply inline-grid h-9 w-9 place-items-center rounded-full text-muted transition hover:bg-canvas hover:text-ink active:scale-95 disabled:opacity-40;
   }
+  .glass-btn {
+    @apply inline-grid h-9 w-9 place-items-center rounded-full bg-black/40 text-white backdrop-blur-md transition hover:bg-black/60 active:scale-95 disabled:opacity-40;
+  }
   .input {
     @apply h-11 w-full rounded-xl border border-black/10 bg-white px-3.5 text-[15px] text-ink outline-none transition
       placeholder:text-subtle focus:border-ink/40 focus:ring-4 focus:ring-black/5;

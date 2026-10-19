@@ -33,7 +33,10 @@ create table if not exists public.stores (
   cover_url               text,
   tagline                 text check (tagline is null or char_length(tagline) <= 120),
   accent_color            text not null default '#22c55e' check (accent_color ~ '^#[0-9a-fA-F]{6}$'),
-  layout                  text not null default 'feed' check (layout in ('feed', 'list')),
+  layout                  text not null default 'feed' check (layout in ('feed', 'list', 'grid')),
+  theme                   text not null default 'dark' check (theme in ('dark', 'light')),
+  bg_color                text,
+  button_style            text not null default 'accent' check (button_style in ('accent', 'whatsapp', 'monochrome')),
   created_by              uuid references auth.users (id) on delete cascade default auth.uid(),
   created_at              timestamptz not null default now(),
   -- Campos de suscripción y facturación Stripe ($30 USD/mes)
@@ -45,8 +48,13 @@ create table if not exists public.stores (
   plan_price_id           text
 );
 
--- Asegura la columna si la tabla ya fue creada previamente
+-- Asegura las columnas si la tabla ya fue creada previamente
 alter table public.stores add column if not exists cover_url text;
+alter table public.stores add column if not exists theme text not null default 'dark';
+alter table public.stores add column if not exists bg_color text;
+alter table public.stores add column if not exists button_style text not null default 'accent';
+alter table public.stores drop constraint if exists stores_layout_check;
+alter table public.stores add constraint stores_layout_check check (layout in ('feed', 'list', 'grid'));
 
 -- Slugs reservados que no pueden ser usados por ningún local
 alter table public.stores drop constraint if exists stores_slug_not_reserved;

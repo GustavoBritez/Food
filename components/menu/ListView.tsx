@@ -46,10 +46,19 @@ export function ListView({ store, sections, actions, preview }: Props) {
   }
 
   const initial = store.name.trim().charAt(0).toUpperCase() || 'L';
+  const isDark = store.theme === 'light' ? false : (store.theme === 'dark' ? true : false);
+  const bgColor = store.bg_color || (isDark ? '#0a0a0a' : '#ffffff');
 
   return (
     <>
-      <div ref={scrollerRef} className="relative h-full min-h-dvh overflow-y-auto overscroll-contain bg-white">
+      <div
+        ref={scrollerRef}
+        className={cn(
+          'relative h-full min-h-dvh overflow-y-auto overscroll-contain transition-colors duration-200',
+          isDark ? 'text-white' : 'text-neutral-900'
+        )}
+        style={{ backgroundColor: bgColor }}
+      >
         {/* Banner de Portada / Imagen de fondo del local */}
         {store.cover_url && (
           <div className="relative h-36 sm:h-52 w-full overflow-hidden bg-neutral-950">
@@ -71,7 +80,15 @@ export function ListView({ store, sections, actions, preview }: Props) {
           </div>
         )}
 
-        <header ref={headerRef} className="sticky top-0 z-20 border-b border-black/[0.06] bg-white/95 backdrop-blur-xl">
+        <header
+          ref={headerRef}
+          className={cn(
+            'sticky top-0 z-20 border-b backdrop-blur-xl transition-colors duration-200',
+            isDark
+              ? 'border-white/10 bg-neutral-900/90 text-white'
+              : 'border-black/[0.06] bg-white/95 text-neutral-900'
+          )}
+        >
           <div className="mx-auto max-w-5xl px-4 pt-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
@@ -81,7 +98,7 @@ export function ListView({ store, sections, actions, preview }: Props) {
                     alt={store.name}
                     width={48}
                     height={48}
-                    className="h-12 w-12 shrink-0 rounded-2xl object-cover ring-2 ring-white shadow-md"
+                    className="h-12 w-12 shrink-0 rounded-2xl object-cover ring-2 ring-white/20 shadow-md"
                   />
                 ) : (
                   <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[var(--accent)] text-lg font-semibold text-[var(--accent-fg)] shadow-md">
@@ -90,7 +107,7 @@ export function ListView({ store, sections, actions, preview }: Props) {
                 )}
                 <div className="min-w-0">
                   <h1 className="truncate text-[20px] sm:text-[22px] font-bold leading-tight tracking-tight">{store.name}</h1>
-                  <p className="truncate text-[13px] text-subtle">{store.tagline || 'Menú digital'}</p>
+                  <p className={cn('truncate text-[13px]', isDark ? 'text-white/60' : 'text-subtle')}>{store.tagline || 'Menú digital'}</p>
                 </div>
               </div>
 
@@ -98,14 +115,19 @@ export function ListView({ store, sections, actions, preview }: Props) {
             </div>
 
             <div className="relative mt-3">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
+              <Search className={cn('pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2', isDark ? 'text-white/40' : 'text-subtle')} />
               <input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar plato, bebida o ingrediente..."
                 aria-label="Buscar en el menú"
-                className="h-10 w-full rounded-xl bg-canvas pl-10 pr-9 text-[15px] outline-none placeholder:text-subtle focus:ring-4 focus:ring-black/5"
+                className={cn(
+                  'h-10 w-full rounded-xl pl-10 pr-9 text-[15px] outline-none transition focus:ring-4',
+                  isDark
+                    ? 'bg-white/10 text-white placeholder:text-white/40 focus:ring-white/10'
+                    : 'bg-canvas text-ink placeholder:text-subtle focus:ring-black/5'
+                )}
               />
               {query && (
                 <button
@@ -130,6 +152,8 @@ export function ListView({ store, sections, actions, preview }: Props) {
                       'h-8 shrink-0 rounded-full px-3.5 text-[13.5px] font-medium transition active:scale-95',
                       activeCat === category.id
                         ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm'
+                        : isDark
+                        ? 'bg-white/10 text-white/80 hover:bg-white/20'
                         : 'bg-canvas text-ink hover:bg-black/[0.07]'
                     )}
                   >
@@ -147,26 +171,36 @@ export function ListView({ store, sections, actions, preview }: Props) {
           {filtered.length === 0 ? (
             <div className="py-20 text-center">
               <p className="font-semibold text-lg">{query ? 'No encontramos nada' : 'El menú está vacío'}</p>
-              <p className="mt-1 text-sm text-muted">
+              <p className={cn('mt-1 text-sm', isDark ? 'text-white/60' : 'text-muted')}>
                 {query ? 'Probá con otra palabra.' : 'El comercio todavía no cargó productos.'}
               </p>
             </div>
           ) : (
             filtered.map(({ category, products }) => (
               <section key={category.id} id={idPrefix + category.id} className="pt-8">
-                <div className="flex items-center gap-2 pb-3 mb-3 border-b border-black/[0.06]">
-                  <h2 className="text-[14px] font-bold uppercase tracking-wider text-subtle">{category.name}</h2>
-                  <span className="text-[12px] text-muted">({products.length})</span>
+                <div className={cn('flex items-center gap-2 pb-3 mb-3 border-b', isDark ? 'border-white/10' : 'border-black/[0.06]')}>
+                  <h2 className={cn('text-[14px] font-bold uppercase tracking-wider', isDark ? 'text-white/70' : 'text-subtle')}>{category.name}</h2>
+                  <span className={cn('text-[12px]', isDark ? 'text-white/50' : 'text-muted')}>({products.length})</span>
                 </div>
                 {/* Cuadrícula responsiva (1 columna en celular y simulador iPhone, 2 columnas en PC) */}
                 <div className={cn('grid gap-3.5', preview ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2')}>
                   {products.map((p) => (
-                    <div key={p.id} className="rounded-2xl border border-black/[0.06] bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-md transition">
+                    <div
+                      key={p.id}
+                      className={cn(
+                        'rounded-2xl border p-3.5 sm:p-4 shadow-xs hover:shadow-md transition',
+                        isDark
+                          ? 'border-white/10 bg-neutral-900/80 text-white'
+                          : 'border-black/[0.06] bg-white text-neutral-900'
+                      )}
+                    >
                       <ProductCard
                         product={p}
                         qty={actions.qtyOf(p.id)}
                         onOrderAtTable={actions.orderAtTable}
                         onOrderWhatsApp={actions.orderOneByWhatsApp}
+                        buttonStyle={store.button_style}
+                        isDark={isDark}
                       />
                     </div>
                   ))}
@@ -175,7 +209,10 @@ export function ListView({ store, sections, actions, preview }: Props) {
             ))
           )}
 
-          <footer className="mt-12 border-t border-black/[0.06] pt-6 text-center text-[12px] leading-relaxed text-subtle">
+          <footer className={cn(
+            'mt-12 border-t pt-6 text-center text-[12px] leading-relaxed',
+            isDark ? 'border-white/10 text-white/40' : 'border-black/[0.06] text-subtle'
+          )}>
             Precios sujetos a modificación por el comercio. No procesamos pagos.
             <br />
             <span className="font-medium text-black/50">Menú creado con Carta App</span>
