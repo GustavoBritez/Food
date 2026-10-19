@@ -25,6 +25,7 @@ import { CategoryModal } from './CategoryModal';
 import { ProductModal } from './ProductModal';
 import { QrModal } from './QrModal';
 import { StoreSettings } from './StoreSettings';
+import { SubscriptionBanner } from './SubscriptionBanner';
 import { createClient } from '@/lib/supabase/client';
 import type { Category, Product, Store } from '@/lib/types';
 import { formatPrice, menuUrl } from '@/lib/utils';
@@ -392,7 +393,10 @@ export function AdminDashboard({
       </div>
 
       {/* Layout Principal: Dos columnas en Desktop (Gestión + Live Preview) */}
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+        {/* Banner de Estado de Suscripción / Paywall Stripe */}
+        <SubscriptionBanner store={store} />
+
         <div className="grid gap-8 lg:grid-cols-12">
           {/* Columna Izquierda: CRUD / Configuración */}
           <div
@@ -421,6 +425,14 @@ export function AdminDashboard({
                     <button
                       type="button"
                       onClick={() => {
+                        const isSubscribed =
+                          store.id === 'demo-store' ||
+                          store.subscription_status === 'active' ||
+                          store.subscription_status === 'trialing';
+                        if (!isSubscribed) {
+                          alert('Debes activar tu suscripción ($30 USD/mes) para crear categorías.');
+                          return;
+                        }
                         setEditingCategory(null);
                         setCatModalOpen(true);
                       }}
@@ -432,6 +444,14 @@ export function AdminDashboard({
                       type="button"
                       disabled={categories.length === 0}
                       onClick={() => {
+                        const isSubscribed =
+                          store.id === 'demo-store' ||
+                          store.subscription_status === 'active' ||
+                          store.subscription_status === 'trialing';
+                        if (!isSubscribed) {
+                          alert('Debes activar tu suscripción ($30 USD/mes) para agregar platos.');
+                          return;
+                        }
                         setEditingProduct(null);
                         setProdModalOpen(true);
                       }}

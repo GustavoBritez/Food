@@ -1,5 +1,13 @@
 export type MenuLayout = 'feed' | 'list';
 
+export type SubscriptionStatus =
+  | 'inactive'
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'unpaid';
+
 export type Store = {
   id: string;
   name: string;
@@ -14,6 +22,12 @@ export type Store = {
   /** Estilo del menú público */
   layout: MenuLayout;
   created_at?: string;
+  /** Campos de facturación Stripe ($30 USD/mes) */
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  subscription_status?: SubscriptionStatus;
+  current_period_end?: string | null;
+  plan_price_id?: string | null;
 };
 
 export type Category = {
@@ -40,4 +54,8 @@ export type Product = {
 export type PublicStore = Pick<
   Store,
   'name' | 'slug' | 'whatsapp' | 'logo_url' | 'tagline' | 'accent_color' | 'layout'
->;
+> & {
+  subscription_status?: SubscriptionStatus;
+  current_period_end?: string | null;
+};
+
