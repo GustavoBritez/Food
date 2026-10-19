@@ -5,7 +5,7 @@ import { AdminClientWrapper } from './AdminClientWrapper';
 import type { Category, Product, Store } from '@/lib/types';
 
 export const metadata: Metadata = {
-  title: 'Panel de Administración · MenuQR',
+  title: 'Panel de Administración · LaCarta',
   robots: { index: false },
 };
 

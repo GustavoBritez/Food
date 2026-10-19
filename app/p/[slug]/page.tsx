@@ -59,7 +59,7 @@ const getMenu = cache(async (slug: string) => {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const menu = await getMenu(params.slug);
-  if (!menu) return { title: 'Menú no encontrado · MenuQR' };
+  if (!menu) return { title: 'Menú no encontrado · LaCarta' };
   const title = `${menu.store.name} · Menú`;
   const description = `${menu.store.tagline || `Mirá el menú de ${menu.store.name}`} y pedí en la mesa o por WhatsApp.`;
   return {
@@ -79,5 +79,9 @@ export default async function PublicMenuPage({ params }: Params) {
   const menu = await getMenu(params.slug);
   if (!menu) notFound();
 
-  return <PublicMenu store={menu.store} categories={menu.categories} products={menu.products} />;
+  return (
+    <main className="h-full min-h-dvh w-full overflow-hidden bg-neutral-950 text-white">
+      <PublicMenu store={menu.store} categories={menu.categories} products={menu.products} />
+    </main>
+  );
 }

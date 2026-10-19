@@ -50,7 +50,7 @@ export function QrModal({ open, onClose, store }: Props) {
     ctx.drawImage(canvas, padding, padding, size - padding * 2, size - padding * 2);
 
     const a = document.createElement('a');
-    a.download = `menuqr-${store.slug}.png`;
+    a.download = `lacarta-${store.slug}.png`;
     a.href = exportCanvas.toDataURL('image/png');
     a.click();
   }

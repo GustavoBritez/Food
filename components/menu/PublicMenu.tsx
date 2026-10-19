@@ -13,7 +13,7 @@ import { cn, DEFAULT_ACCENT, formatPrice, HEX_REGEX, readableTextColor } from '@
 
 export type MenuSection = { category: Category; products: Product[] };
 
-/** Acciones de pedido compartidas por las dos vistas (feed y lista) */
+/** Acciones de pedido compartidas por las vistas */
 export type MenuActions = {
   qtyOf: (id: string) => number;
   orderAtTable: (p: Product) => void;
@@ -27,7 +27,7 @@ type Props = {
   store: PublicStore;
   categories: Category[];
   products: Product[];
-  /** Vista previa del panel: carrito en memoria y todo contenido en el marco del celular */
+  /** Vista previa del panel: carrito en memoria y contenido en marco de celular */
   preview?: boolean;
 };
 
@@ -36,7 +36,7 @@ function openExternal(url: string) {
 }
 
 export function PublicMenu({ store, categories, products, preview = false }: Props) {
-  const { items, add, clear } = useCart(preview ? null : `menuqr:cart:${store.slug}`);
+  const { items, add, clear } = useCart(preview ? null : `lacarta:cart:${store.slug}`);
   const [waiterOpen, setWaiterOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -103,21 +103,32 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
   };
 
   const cssVars = { '--accent': accent, '--accent-fg': readableTextColor(accent) } as CSSProperties;
-  const sheetProps = { contained: true, forceMobile: preview || layout === 'feed' };
+  // En preview (marco admin) el sheet queda contenido dentro del marco; en la web real se abre como modal/sheet
+  const sheetProps = preview
+    ? { contained: true, forceMobile: true }
+    : { contained: false, forceMobile: false };
 
   return (
     <div
-      className={cn('flex h-full w-full justify-center overflow-hidden', layout === 'feed' ? 'bg-black' : 'bg-white')}
+      className={cn(
+        'flex h-full min-h-dvh w-full justify-center overflow-hidden',
+        layout === 'feed' ? 'bg-neutral-950 text-white' : 'bg-neutral-50 text-ink'
+      )}
       style={cssVars}
     >
-      <div className={cn('relative h-full w-full overflow-hidden', layout === 'feed' ? 'max-w-[480px] bg-black' : 'max-w-2xl bg-white')}>
+      <div
+        className={cn(
+          'relative h-full min-h-dvh w-full overflow-hidden',
+          preview ? 'max-w-[480px]' : ''
+        )}
+      >
         {layout === 'feed' ? (
           <FeedView store={store} sections={sections} actions={actions} preview={preview} />
         ) : (
           <ListView store={store} sections={sections} actions={actions} preview={preview} />
         )}
 
-        {/* Carrito */}
+        {/* Modal / Sheet del Carrito */}
         <Sheet open={cartOpen} onClose={() => setCartOpen(false)} title="Tu pedido" {...sheetProps}>
           {lines.length === 0 ? (
             <p className="py-10 text-center text-muted">Todavía no agregaste nada.</p>
@@ -131,11 +142,21 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
                       <p className="text-[13px] tabular-nums text-muted">{formatPrice(l.price * l.qty)}</p>
                     </div>
                     <div className="flex items-center gap-1 rounded-full bg-canvas p-1">
-                      <button type="button" onClick={() => add(l.id, -1)} className="icon-btn h-7 w-7 bg-white text-ink shadow-sm" aria-label={`Quitar ${l.name}`}>
+                      <button
+                        type="button"
+                        onClick={() => add(l.id, -1)}
+                        className="icon-btn h-7 w-7 bg-white text-ink shadow-sm"
+                        aria-label={`Quitar ${l.name}`}
+                      >
                         {l.qty === 1 ? <Trash2 className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
                       </button>
                       <span className="w-6 text-center text-sm font-semibold tabular-nums">{l.qty}</span>
-                      <button type="button" onClick={() => add(l.id, 1)} className="icon-btn h-7 w-7 bg-white text-ink shadow-sm" aria-label={`Agregar ${l.name}`}>
+                      <button
+                        type="button"
+                        onClick={() => add(l.id, 1)}
+                        className="icon-btn h-7 w-7 bg-white text-ink shadow-sm"
+                        aria-label={`Agregar ${l.name}`}
+                      >
                         <Plus className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -175,7 +196,7 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
           )}
         </Sheet>
 
-        {/* Mostrar al mozo */}
+        {/* Modal / Sheet Mostrar al mozo */}
         <Sheet open={waiterOpen} onClose={() => setWaiterOpen(false)} {...sheetProps}>
           <div className="pt-2 text-center">
             <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-canvas">
@@ -188,7 +209,7 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
           <ul className="mt-5 space-y-2 rounded-3xl bg-canvas p-5">
             {lines.map((l) => (
               <li key={l.id} className="flex items-baseline justify-between gap-4">
-                <span className="text-[22px] font-semibold leading-tight tracking-tight">
+                <span className="text-[20px] sm:text-[22px] font-semibold leading-tight tracking-tight">
                   {l.qty}x {l.name}
                 </span>
                 <span className="shrink-0 text-[15px] tabular-nums text-muted">{formatPrice(l.price * l.qty)}</span>

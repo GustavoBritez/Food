@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useMemo, useRef, useState } from 'react';
 import { ChevronRight, Search, X } from 'lucide-react';
+import { PwaInstallButton } from '@/components/PwaInstallButton';
 import { ProductCard } from './ProductCard';
 import type { PublicStore } from '@/lib/types';
 import { cn, formatPrice, normalizeText } from '@/lib/utils';
@@ -15,7 +16,7 @@ type Props = {
   preview: boolean;
 };
 
-/** Estilo clásico: lista con buscador y categorías */
+/** Estilo clásico: lista con buscador y categorías adaptada para celular y PC */
 export function ListView({ store, sections, actions, preview }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -44,31 +45,35 @@ export function ListView({ store, sections, actions, preview }: Props) {
     root.scrollTo({ top: el.offsetTop - offset, behavior: 'smooth' });
   }
 
-  const initial = store.name.trim().charAt(0).toUpperCase() || 'M';
+  const initial = store.name.trim().charAt(0).toUpperCase() || 'L';
 
   return (
     <>
-      <div ref={scrollerRef} className="relative h-full overflow-y-auto overscroll-contain">
-        <header ref={headerRef} className="sticky top-0 z-20 border-b border-black/[0.06] bg-white/90 backdrop-blur-xl">
-          <div className="px-4 pt-4">
-            <div className="flex items-center gap-3">
-              {store.logo_url ? (
-                <Image
-                  src={store.logo_url}
-                  alt={store.name}
-                  width={44}
-                  height={44}
-                  className="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 ring-black/5"
-                />
-              ) : (
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--accent)] text-lg font-semibold text-[var(--accent-fg)]">
-                  {initial}
-                </span>
-              )}
-              <div className="min-w-0">
-                <h1 className="truncate text-[22px] font-semibold leading-tight tracking-tight">{store.name}</h1>
-                <p className="truncate text-[13px] text-subtle">{store.tagline || 'Menú digital'}</p>
+      <div ref={scrollerRef} className="relative h-full min-h-dvh overflow-y-auto overscroll-contain bg-white">
+        <header ref={headerRef} className="sticky top-0 z-20 border-b border-black/[0.06] bg-white/95 backdrop-blur-xl">
+          <div className="mx-auto max-w-5xl px-4 pt-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                {store.logo_url ? (
+                  <Image
+                    src={store.logo_url}
+                    alt={store.name}
+                    width={44}
+                    height={44}
+                    className="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 ring-black/5"
+                  />
+                ) : (
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--accent)] text-lg font-semibold text-[var(--accent-fg)]">
+                    {initial}
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <h1 className="truncate text-[20px] sm:text-[22px] font-bold leading-tight tracking-tight">{store.name}</h1>
+                  <p className="truncate text-[13px] text-subtle">{store.tagline || 'Menú digital'}</p>
+                </div>
               </div>
+
+              <PwaInstallButton variant="button" label="Descargar App" className="hidden sm:inline-flex" />
             </div>
 
             <div className="relative mt-3">
@@ -77,7 +82,7 @@ export function ListView({ store, sections, actions, preview }: Props) {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar en el menú"
+                placeholder="Buscar plato, bebida o ingrediente..."
                 aria-label="Buscar en el menú"
                 className="h-10 w-full rounded-xl bg-canvas pl-10 pr-9 text-[15px] outline-none placeholder:text-subtle focus:ring-4 focus:ring-black/5"
               />
@@ -101,9 +106,9 @@ export function ListView({ store, sections, actions, preview }: Props) {
                     type="button"
                     onClick={() => scrollToCategory(category.id)}
                     className={cn(
-                      'h-8 shrink-0 rounded-full px-3.5 text-[13.5px] font-medium transition',
+                      'h-8 shrink-0 rounded-full px-3.5 text-[13.5px] font-medium transition active:scale-95',
                       activeCat === category.id
-                        ? 'bg-[var(--accent)] text-[var(--accent-fg)]'
+                        ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm'
                         : 'bg-canvas text-ink hover:bg-black/[0.07]'
                     )}
                   >
@@ -117,56 +122,62 @@ export function ListView({ store, sections, actions, preview }: Props) {
           </div>
         </header>
 
-        <main className={cn('px-4', actions.count > 0 ? 'pb-28' : 'pb-8')}>
+        <main className={cn('mx-auto max-w-5xl px-4 sm:px-6', actions.count > 0 ? 'pb-28' : 'pb-12')}>
           {filtered.length === 0 ? (
             <div className="py-20 text-center">
-              <p className="font-medium">{query ? 'No encontramos nada' : 'El menú está vacío'}</p>
+              <p className="font-semibold text-lg">{query ? 'No encontramos nada' : 'El menú está vacío'}</p>
               <p className="mt-1 text-sm text-muted">
                 {query ? 'Probá con otra palabra.' : 'El comercio todavía no cargó productos.'}
               </p>
             </div>
           ) : (
             filtered.map(({ category, products }) => (
-              <section key={category.id} id={idPrefix + category.id} className="pt-6">
-                <h2 className="text-[13px] font-semibold uppercase tracking-wider text-subtle">{category.name}</h2>
-                <div className="divide-y divide-black/[0.06]">
+              <section key={category.id} id={idPrefix + category.id} className="pt-8">
+                <div className="flex items-center gap-2 pb-3 mb-3 border-b border-black/[0.06]">
+                  <h2 className="text-[14px] font-bold uppercase tracking-wider text-subtle">{category.name}</h2>
+                  <span className="text-[12px] text-muted">({products.length})</span>
+                </div>
+                {/* Cuadrícula responsiva en desktop */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {products.map((p) => (
-                    <ProductCard
-                      key={p.id}
-                      product={p}
-                      qty={actions.qtyOf(p.id)}
-                      onOrderAtTable={actions.orderAtTable}
-                      onOrderWhatsApp={actions.orderOneByWhatsApp}
-                    />
+                    <div key={p.id} className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm hover:shadow-md transition">
+                      <ProductCard
+                        product={p}
+                        qty={actions.qtyOf(p.id)}
+                        onOrderAtTable={actions.orderAtTable}
+                        onOrderWhatsApp={actions.orderOneByWhatsApp}
+                      />
+                    </div>
                   ))}
                 </div>
               </section>
             ))
           )}
 
-          <footer className="mt-10 border-t border-black/[0.06] pt-6 text-center text-[12px] leading-relaxed text-subtle">
+          <footer className="mt-12 border-t border-black/[0.06] pt-6 text-center text-[12px] leading-relaxed text-subtle">
             Precios sujetos a modificación por el comercio. No procesamos pagos.
             <br />
-            <span className="text-black/30">Menú creado con MenuQR</span>
+            <span className="font-medium text-black/50">Menú creado con LaCarta</span>
           </footer>
         </main>
       </div>
 
+      {/* Barra de Pedido Flotante */}
       {actions.count > 0 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-safe">
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-safe flex justify-center">
           <button
             type="button"
             onClick={actions.openCart}
-            className="pointer-events-auto flex h-14 w-full items-center justify-between rounded-2xl bg-ink px-4 text-white shadow-2xl shadow-black/20 transition active:scale-[0.98] animate-slide-up"
+            className="pointer-events-auto flex h-14 w-full max-w-md items-center justify-between rounded-2xl bg-ink px-4 text-white shadow-2xl shadow-black/20 transition active:scale-[0.98] animate-slide-up"
           >
             <span className="flex items-center gap-3">
               <span
                 key={actions.count}
-                className="grid h-7 min-w-7 place-items-center rounded-full bg-[var(--accent)] px-1.5 text-sm font-semibold tabular-nums text-[var(--accent-fg)] animate-pop"
+                className="grid h-7 min-w-7 place-items-center rounded-full bg-[var(--accent)] px-1.5 text-sm font-bold tabular-nums text-[var(--accent-fg)] animate-pop"
               >
                 {actions.count}
               </span>
-              <span className="text-[15px] font-medium">Ver pedido</span>
+              <span className="text-[15px] font-medium">Ver mi pedido</span>
             </span>
             <span className="flex items-center gap-1 text-[15px] font-semibold tabular-nums">
               {formatPrice(actions.total)} <ChevronRight className="h-4 w-4 opacity-60" />

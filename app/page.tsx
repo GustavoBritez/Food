@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, HandPlatter, QrCode, Smartphone } from 'lucide-react';
 import { Logo } from '@/components/Logo';
+import { PwaInstallButton } from '@/components/PwaInstallButton';
 import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 
 type Props = { searchParams: Record<string, string | string[] | undefined> };
@@ -17,9 +18,12 @@ export default function HomePage({ searchParams }: Props) {
       <header className="shrink-0 border-b border-black/[0.05] bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-5">
           <Logo />
-          <Link href="/login" className="btn-ghost">
-            Ingresar
-          </Link>
+          <div className="flex items-center gap-2">
+            <PwaInstallButton variant="button" label="Descargar App" className="hidden sm:inline-flex h-9 text-[13px]" />
+            <Link href="/login" className="btn-ghost">
+              Ingresar
+            </Link>
+          </div>
         </div>
       </header>
 

@@ -4,7 +4,7 @@ import { Logo } from '@/components/Logo';
 import { LoginForm } from './LoginForm';
 
 export const metadata: Metadata = {
-  title: 'Ingresar · MenuQR',
+  title: 'Ingresar · LaCarta',
   robots: { index: false },
 };
 
