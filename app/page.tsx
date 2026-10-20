@@ -13,7 +13,7 @@ export default function HomePage({ searchParams }: Props) {
   if (code) redirect(`/auth/callback?code=${encodeURIComponent(code)}&next=/admin`);
 
   return (
-    <div className="flex h-dvh max-h-dvh flex-col justify-between overflow-hidden bg-white select-none">
+    <div className="flex min-h-dvh flex-col justify-between overflow-y-auto bg-white">
       {/* Header */}
       <header className="shrink-0 border-b border-black/[0.05] bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-5">
@@ -27,8 +27,8 @@ export default function HomePage({ searchParams }: Props) {
         </div>
       </header>
 
-      {/* Hero y características en un único viewport */}
-      <main className="flex flex-1 flex-col justify-center px-5 py-2 sm:py-4">
+      {/* Hero y características */}
+      <main className="flex flex-1 flex-col justify-center px-5 py-6 sm:py-8">
         <div className="mx-auto w-full max-w-4xl text-center">
           <div className="mb-2 sm:mb-3 inline-flex items-center gap-1.5 rounded-full bg-canvas px-3 py-1 text-[12px] sm:text-[13px] font-medium text-muted">
             <QrCode className="h-3.5 w-3.5" /> Menú digital para bares y restaurantes
@@ -54,9 +54,9 @@ export default function HomePage({ searchParams }: Props) {
           </div>
         </div>
 
-        {/* 3 Bloques destacados compactos para que entren sin scroll */}
-        <div className="mx-auto mt-4 sm:mt-6 grid w-full max-w-4xl grid-cols-1 gap-2.5 sm:grid-cols-3">
-          <article className="rounded-2xl bg-canvas p-3.5 sm:p-4 text-left transition hover:bg-black/[0.04]">
+        {/* 3 Bloques destacados */}
+        <div className="mx-auto mt-6 sm:mt-8 grid w-full max-w-4xl grid-cols-1 gap-3 sm:grid-cols-3">
+          <article className="rounded-2xl bg-canvas p-4 sm:p-5 text-left transition hover:bg-black/[0.04]">
             <span className="grid h-8 w-8 place-items-center rounded-xl bg-white text-ink shadow-soft">
               <HandPlatter className="h-4 w-4" />
             </span>
@@ -66,7 +66,7 @@ export default function HomePage({ searchParams }: Props) {
             </p>
           </article>
 
-          <article className="rounded-2xl bg-canvas p-3.5 sm:p-4 text-left transition hover:bg-black/[0.04]">
+          <article className="rounded-2xl bg-canvas p-4 sm:p-5 text-left transition hover:bg-black/[0.04]">
             <span className="grid h-8 w-8 place-items-center rounded-xl bg-white text-whatsapp-dark shadow-soft">
               <WhatsAppIcon className="h-4 w-4" />
             </span>
@@ -76,7 +76,7 @@ export default function HomePage({ searchParams }: Props) {
             </p>
           </article>
 
-          <article className="rounded-2xl bg-ink p-3.5 sm:p-4 text-left text-white transition hover:bg-black">
+          <article className="rounded-2xl bg-ink p-4 sm:p-5 text-left text-white transition hover:bg-black">
             <span className="grid h-8 w-8 place-items-center rounded-xl bg-white/10 text-white">
               <Smartphone className="h-4 w-4" />
             </span>
@@ -88,8 +88,8 @@ export default function HomePage({ searchParams }: Props) {
         </div>
       </main>
 
-      {/* Footer sin scroll con la firma solicitada */}
-      <footer className="shrink-0 border-t border-black/[0.05] py-3 text-center text-[12px] sm:text-[13px] text-subtle">
+      {/* Footer accesible con scroll en móvil */}
+      <footer className="shrink-0 border-t border-black/[0.05] py-4 text-center text-[12px] sm:text-[13px] text-subtle pb-6 sm:pb-4">
         © 2026 · CodigoMecha
       </footer>
     </div>

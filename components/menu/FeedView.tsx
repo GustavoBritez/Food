@@ -85,17 +85,35 @@ export function FeedView({ store, sections, actions, preview }: Props) {
   const [query, setQuery] = useState('');
   const [toast, setToast] = useState<string | null>(null);
 
+  // Detección de dispositivo para saber si el usuario está en PC o Celular
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const checkDesktop = () => {
+      setIsDesktop(typeof window !== 'undefined' && window.innerWidth >= 768);
+    };
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
+
   // En PC de escritorio permite elegir entre Catálogo Ancho y Modo Reels
   const [desktopMode, setDesktopMode] = useState<'grid' | 'reels'>('grid');
 
   const scrollerRef = useRef<HTMLDivElement>(null);
   const chipsRef = useRef<HTMLDivElement>(null);
+  const desktopGridScrollerRef = useRef<HTMLDivElement>(null);
+  const [gridActiveCat, setGridActiveCat] = useState<string | null>(null);
+
+  // La grilla solo está activa si estamos en pantalla grande (md), no estamos en preview y desktopMode es grid
+  const isGridActive = isDesktop && !preview && desktopMode === 'grid';
 
   const { liked, toggle } = useLikes(preview ? null : `cartaapp:likes:${store.slug}`);
 
   const totalSlides = slides.length + 1; // +1 por la tarjeta final
   const activeSlide = slides[active];
-  const activeCat = activeSlide?.categoryId ?? sections[0]?.category.id;
+  const activeCat = isGridActive
+    ? (gridActiveCat ?? sections[0]?.category.id)
+    : (activeSlide?.categoryId ?? sections[0]?.category.id);
 
   const firstIndexByCat = useMemo(() => {
     const map = new Map<string, number>();
@@ -111,6 +129,36 @@ export function FeedView({ store, sections, actions, preview }: Props) {
     return map;
   }, [slides]);
 
+  const goTo = useCallback((index: number, behavior: ScrollBehavior = 'smooth') => {
+    const root = scrollerRef.current;
+    if (!root) return;
+    const target = root.querySelector<HTMLElement>(`[data-index="${index}"]`);
+    if (target) {
+      root.scrollTo({ top: target.offsetTop, behavior });
+    } else {
+      root.scrollTo({ top: index * root.clientHeight, behavior });
+    }
+    setActive(index);
+  }, []);
+
+  const scrollToCategory = useCallback((categoryId: string) => {
+    if (isGridActive) {
+      setGridActiveCat(categoryId);
+      const container = desktopGridScrollerRef.current;
+      const el = document.getElementById(`cat-sec-${categoryId}`);
+      if (el && container) {
+        const offset = 85;
+        const targetTop = el.offsetTop - offset;
+        container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+      } else if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else {
+      const targetIndex = firstIndexByCat.get(categoryId) ?? 0;
+      goTo(targetIndex);
+    }
+  }, [isGridActive, firstIndexByCat, goTo]);
+
   // Teclado para navegar en PC
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -123,9 +171,9 @@ export function FeedView({ store, sections, actions, preview }: Props) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [active, slides.length, gridOpen, infoOpen]);
+  }, [active, slides.length, gridOpen, infoOpen, goTo]);
 
-  // Detecta el slide visible por IntersectionObserver
+  // Detecta el slide visible por IntersectionObserver en Reels
   useEffect(() => {
     const root = scrollerRef.current;
     if (!root) return;
@@ -148,7 +196,31 @@ export function FeedView({ store, sections, actions, preview }: Props) {
     return () => observer.disconnect();
   }, [slides.length, desktopMode]);
 
-  // Auto-scroll del chip de categoría
+  // Detecta la categoría visible por IntersectionObserver en Catálogo PC
+  useEffect(() => {
+    if (!isGridActive) return;
+    const gridEl = desktopGridScrollerRef.current;
+    if (!gridEl) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const catId = entry.target.getAttribute('data-cat-section');
+            if (catId) setGridActiveCat(catId);
+          }
+        });
+      },
+      { root: gridEl, rootMargin: '-10% 0px -70% 0px', threshold: 0 }
+    );
+
+    const sectionEls = gridEl.querySelectorAll('[data-cat-section]');
+    sectionEls.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [isGridActive, sections]);
+
+  // Auto-scroll del chip de categoría en la barra superior
   useEffect(() => {
     const container = chipsRef.current;
     if (!container || !activeCat) return;
@@ -158,12 +230,6 @@ export function FeedView({ store, sections, actions, preview }: Props) {
       container.scrollTo({ left, behavior: 'smooth' });
     }
   }, [activeCat]);
-
-  function goTo(index: number, behavior: ScrollBehavior = 'smooth') {
-    const root = scrollerRef.current;
-    if (!root) return;
-    root.scrollTo({ top: index * root.clientHeight, behavior });
-  }
 
   function showToast(msg: string) {
     setToast(msg);
@@ -267,14 +333,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                 key={category.id}
                 type="button"
                 data-cat={category.id}
-                onClick={() => {
-                  if (desktopMode === 'grid') {
-                    const el = document.getElementById(`cat-sec-${category.id}`);
-                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  } else {
-                    goTo(firstIndexByCat.get(category.id) ?? 0);
-                  }
-                }}
+                onClick={() => scrollToCategory(category.id)}
                 className={cn(
                   'h-8 shrink-0 rounded-full px-3.5 text-[12.5px] font-semibold backdrop-blur-md transition active:scale-95',
                   activeCat === category.id
@@ -384,6 +443,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
 
       {/* A) MODO CATÁLOGO ANCHO PARA PC */}
       <div
+        ref={desktopGridScrollerRef}
         className={cn(
           'h-full min-h-dvh overflow-y-auto overscroll-contain pt-24 pb-16 px-4 md:px-6 transition-colors duration-200',
           desktopMode === 'grid' && !preview
@@ -393,7 +453,12 @@ export function FeedView({ store, sections, actions, preview }: Props) {
       >
         <div className="mx-auto max-w-7xl">
           {sections.map(({ category, products }) => (
-            <section key={category.id} id={`cat-sec-${category.id}`} className="mb-10">
+            <section
+              key={category.id}
+              id={`cat-sec-${category.id}`}
+              data-cat-section={category.id}
+              className="mb-10 scroll-mt-24"
+            >
               <div className={cn('flex items-center gap-3 border-b pb-3 mb-5', isDark ? 'border-white/10' : 'border-black/10')}>
                 <h2 className={cn('text-xl font-bold tracking-tight', isDark ? 'text-white' : 'text-neutral-900')}>{category.name}</h2>
                 <span className={cn('rounded-full px-2.5 py-0.5 text-[12px] font-medium', isDark ? 'bg-white/10 text-white/60' : 'bg-black/5 text-neutral-600')}>
@@ -842,12 +907,9 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                 type="button"
                 onClick={() => {
                   setInfoOpen(false);
-                  if (desktopMode === 'grid') {
-                    const el = document.getElementById(`cat-sec-${category.id}`);
-                    el?.scrollIntoView({ behavior: 'smooth' });
-                  } else {
-                    goTo(firstIndexByCat.get(category.id) ?? 0);
-                  }
+                  setTimeout(() => {
+                    scrollToCategory(category.id);
+                  }, 80);
                 }}
                 className="flex w-full items-center justify-between py-2.5 text-left transition hover:text-emerald-600"
               >

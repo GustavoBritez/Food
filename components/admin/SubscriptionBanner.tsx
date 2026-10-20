@@ -197,6 +197,8 @@ export function SubscriptionBanner({ store }: Props) {
 
   // C. SUSCRIPCIÓN ACTIVA VÍA MERCADO PAGO
   if (status === 'active') {
+    const isYearly = store.plan_type === 'yearly';
+
     return (
       <div className="space-y-4">
         <div className="flex flex-col gap-3 rounded-3xl border border-emerald-500/20 bg-emerald-500/[0.04] p-5 text-xs text-neutral-800 sm:flex-row sm:items-center sm:justify-between sm:text-sm shadow-xs">
@@ -207,10 +209,10 @@ export function SubscriptionBanner({ store }: Props) {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-[15px] text-ink">
-                  Plan Carta App Pro {store.plan_type === 'yearly' ? '(Anual)' : '(Mensual)'}
+                  Plan Carta App Pro {isYearly ? '(Anual)' : '(Mensual)'}
                 </span>
                 <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
-                  {store.plan_type === 'yearly' ? '$500.000 ARS / año' : '$50.000 ARS / mes'} · Activo
+                  {isYearly ? '$500.000 ARS / año · Activo (Plan Máximo)' : '$50.000 ARS / mes · Activo'}
                 </span>
               </div>
               {periodEndFormatted && (
@@ -221,19 +223,26 @@ export function SubscriptionBanner({ store }: Props) {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowPlansModal(!showPlansModal)}
-            className="inline-flex items-center justify-center gap-1.5 self-start rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 shadow-sm transition hover:bg-neutral-50 active:scale-95 sm:self-auto"
-          >
-            <CreditCard className="h-3.5 w-3.5 text-neutral-500" />
-            <span>{showPlansModal ? 'Cerrar opciones' : 'Renovar o Cambiar Plan'}</span>
-            {showPlansModal ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-          </button>
+          {isYearly ? (
+            <div className="inline-flex items-center gap-1.5 self-start rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-2 text-xs font-semibold text-emerald-800 sm:self-auto">
+              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+              <span>Plan Máximo Activo</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowPlansModal(!showPlansModal)}
+              className="inline-flex items-center justify-center gap-1.5 self-start rounded-full bg-[#1a73e8] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1557b0] active:scale-95 sm:self-auto"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>{showPlansModal ? 'Cerrar opción anual' : 'Mejorar a Plan Anual (Ahorrá $100.000)'}</span>
+              {showPlansModal ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+          )}
         </div>
 
         {errorMsg && renderErrorMessage()}
-        {showPlansModal && renderPlanCards()}
+        {!isYearly && showPlansModal && renderPlanCards()}
       </div>
     );
   }
@@ -301,200 +310,250 @@ export function SubscriptionBanner({ store }: Props) {
     );
   }
 
-  // Tarjetas de planes inspiradas en la estética limpia de Google One / Google AI (Imagen 2)
+  // Tarjetas de planes filtradas: solo planes superiores o nada si ya tiene anual
   function renderPlanCards() {
-    const isTrialUsed = Boolean(store.trial_end && new Date(store.trial_end).getTime() < Date.now());
+    const isTrialActive = status === 'trialing' || store.plan_type === 'trial';
+    const isTrialUsed = Boolean(
+      isTrialActive || (store.trial_end && new Date(store.trial_end).getTime() < Date.now())
+    );
+    const isMonthlyActive = status === 'active' && store.plan_type === 'monthly';
+    const isYearlyActive = status === 'active' && store.plan_type === 'yearly';
+
+    // Regla de negocio estricta:
+    // Si la persona ya tiene un plan asignado entonces no le puede aparecer para comprar dicho plan.
+    // Debe aparecerle unicamente un plan superior o nada en caso de tener el plan anual ya asignado.
+    const showTrial = !isTrialUsed && !isTrialActive && status !== 'active';
+    const showMonthly = !isMonthlyActive && !isYearlyActive && !isTrialActive;
+    const showYearly = !isYearlyActive;
+
+    // En período de prueba (trial), los planes superiores para continuar son Mensual y Anual
+    const canShowMonthlyInTrial = status === 'trialing';
+    const effectiveShowMonthly = showMonthly || canShowMonthlyInTrial;
+
+    const cardCount = [showTrial, effectiveShowMonthly, showYearly].filter(Boolean).length;
+    if (cardCount === 0) return null;
+
+    const gridClass =
+      cardCount === 1
+        ? 'grid grid-cols-1 max-w-md mx-auto gap-5 lg:gap-6 pt-2'
+        : cardCount === 2
+        ? 'grid grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto gap-5 lg:gap-6 pt-2'
+        : 'grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6 pt-2';
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6 pt-2">
-        {/* =========================================================================
-            TARJETA 1: GRATIS (Primer mes gratuito)
-           ========================================================================= */}
-        <div className="relative flex flex-col justify-between rounded-[32px] border border-neutral-200 bg-white p-6 sm:p-7 shadow-xs hover:border-neutral-300 transition-all duration-200">
-          <div>
-            <h3 className="text-[26px] font-bold tracking-tight text-neutral-900">
-              {TRIAL_CONFIG.name}
-            </h3>
+      <div className="space-y-4">
+        {isMonthlyActive && (
+          <div className="rounded-2xl border border-[#1a73e8]/30 bg-blue-50/70 p-4 text-xs text-blue-950 sm:text-sm">
+            <div className="flex items-start gap-2.5">
+              <Sparkles className="h-4 w-4 text-[#1a73e8] shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-blue-950">Plan superior disponible: Plan Anual Pro</p>
+                <p className="mt-0.5 text-xs text-blue-800 leading-relaxed">
+                  Ya contás con el Plan Mensual activo. Mejorá tu suscripción al Plan Anual para obtener 2 meses bonificados ($100.000 ARS de ahorro directo) y asegurar tu carta todo el año.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
-            <p className="mt-2 text-[13.5px] leading-relaxed text-neutral-600 min-h-[56px]">
-              Obtén <strong className="font-semibold text-neutral-900">30 días de prueba gratuita</strong> para digitalizar tu carta, recibir pedidos por WhatsApp y probar con tus clientes.
-            </p>
+        <div className={gridClass}>
+          {/* =========================================================================
+              TARJETA 1: GRATIS (Primer mes gratuito)
+             ========================================================================= */}
+          {showTrial && (
+            <div className="relative flex flex-col justify-between rounded-[32px] border border-neutral-200 bg-white p-6 sm:p-7 shadow-xs hover:border-neutral-300 transition-all duration-200">
+              <div>
+                <h3 className="text-[26px] font-bold tracking-tight text-neutral-900">
+                  {TRIAL_CONFIG.name}
+                </h3>
 
-            {/* Precio */}
-            <div className="mt-6 pt-4 border-t border-neutral-100">
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-lg font-semibold text-neutral-900">$</span>
-                <span className="text-4xl sm:text-[42px] font-extrabold tracking-tight text-neutral-900">
-                  0
-                </span>
-                <span className="text-[13px] font-medium text-neutral-500">
-                  ARS {TRIAL_CONFIG.interval}
+                <p className="mt-2 text-[13.5px] leading-relaxed text-neutral-600 min-h-[56px]">
+                  Obtén <strong className="font-semibold text-neutral-900">30 días de prueba gratuita</strong> para digitalizar tu carta, recibir pedidos por WhatsApp y probar con tus clientes.
+                </p>
+
+                {/* Precio */}
+                <div className="mt-6 pt-4 border-t border-neutral-100">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-lg font-semibold text-neutral-900">$</span>
+                    <span className="text-4xl sm:text-[42px] font-extrabold tracking-tight text-neutral-900">
+                      0
+                    </span>
+                    <span className="text-[13px] font-medium text-neutral-500">
+                      ARS {TRIAL_CONFIG.interval}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[12px] text-neutral-500">
+                    {TRIAL_CONFIG.subtext}
+                  </p>
+                </div>
+
+                {/* Lista de características */}
+                <ul className="mt-6 space-y-2.5 text-[13px] text-neutral-700">
+                  {TRIAL_CONFIG.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="mt-8 pt-4">
+                <button
+                  type="button"
+                  disabled={activatingTrial || isTrialUsed || status === 'trialing' || status === 'active'}
+                  onClick={handleActivateTrial}
+                  className="inline-flex h-12 w-full items-center justify-center rounded-full border border-neutral-300 bg-white px-6 text-[14px] font-semibold text-neutral-900 transition hover:bg-neutral-50 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  {activatingTrial ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Activando mes gratis...</span>
+                    </>
+                  ) : status === 'trialing' ? (
+                    'Prueba en curso'
+                  ) : isTrialUsed ? (
+                    'Prueba ya utilizada'
+                  ) : (
+                    'Comenzar'
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* =========================================================================
+              TARJETA 2: PLAN MENSUAL ($50.000 ARS / mes)
+             ========================================================================= */}
+          {effectiveShowMonthly && (
+            <div className="relative flex flex-col justify-between rounded-[32px] border border-neutral-200 bg-white p-6 sm:p-7 shadow-xs hover:border-neutral-300 transition-all duration-200">
+              <div>
+                <h3 className="text-[26px] font-bold tracking-tight text-neutral-900">
+                  {MERCADOPAGO_PLANS.monthly.name}
+                </h3>
+
+                <p className="mt-2 text-[13.5px] leading-relaxed text-neutral-600 min-h-[56px]">
+                  Obtén <strong className="font-semibold text-neutral-900">acceso ilimitado</strong> a pedidos por WhatsApp, mozo en mesa, QR de alta resolución y catálogo visual.
+                </p>
+
+                {/* Precio */}
+                <div className="mt-6 pt-4 border-t border-neutral-100">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-lg font-semibold text-neutral-900">$</span>
+                    <span className="text-3xl sm:text-[38px] font-extrabold tracking-tight text-neutral-900">
+                      {MERCADOPAGO_PLANS.monthly.formattedPrice}
+                    </span>
+                    <span className="text-[13px] font-medium text-neutral-500">
+                      ARS {MERCADOPAGO_PLANS.monthly.interval}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[12px] text-neutral-500">
+                    Cobro mensual vía Mercado Pago
+                  </p>
+                </div>
+
+                {/* Lista de características */}
+                <ul className="mt-6 space-y-2.5 text-[13px] text-neutral-700">
+                  {MERCADOPAGO_PLANS.monthly.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-[#1a73e8] shrink-0 mt-0.5" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="mt-8 pt-4">
+                <button
+                  type="button"
+                  disabled={loadingPlan !== null}
+                  onClick={() => handleMercadoPagoCheckout('monthly')}
+                  className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#1a73e8] px-6 text-[14px] font-semibold text-white shadow-sm transition hover:bg-[#1557b0] active:scale-[0.98] disabled:opacity-50"
+                >
+                  {loadingPlan === 'monthly' ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Conectando con Mercado Pago...</span>
+                    </>
+                  ) : (
+                    'Comenzar'
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* =========================================================================
+              TARJETA 3: PLAN ANUAL ($500.000 ARS / año) - DESTACADO / MÁS ELEGIDO
+             ========================================================================= */}
+          {showYearly && (
+            <div className="relative flex flex-col justify-between rounded-[32px] border-2 border-[#1a73e8] bg-white p-6 sm:p-7 shadow-md transition-all duration-200">
+              {/* Pill superior destacada */}
+              <div className="absolute -top-3.5 left-6 right-6 flex justify-center">
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#1a73e8] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm">
+                  <Sparkles className="h-3 w-3" /> Ahorrás $100.000 (2 meses gratis)
                 </span>
               </div>
-              <p className="mt-1 text-[12px] text-neutral-500">
-                {TRIAL_CONFIG.subtext}
-              </p>
-            </div>
 
-            {/* Lista de características */}
-            <ul className="mt-6 space-y-2.5 text-[13px] text-neutral-700">
-              {TRIAL_CONFIG.features.map((feature) => (
-                <li key={feature} className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+              <div className="pt-2">
+                <h3 className="text-[26px] font-bold tracking-tight text-neutral-900">
+                  {MERCADOPAGO_PLANS.yearly.name}
+                </h3>
 
-          <div className="mt-8 pt-4">
-            <button
-              type="button"
-              disabled={activatingTrial || isTrialUsed || status === 'trialing' || status === 'active'}
-              onClick={handleActivateTrial}
-              className="inline-flex h-12 w-full items-center justify-center rounded-full border border-neutral-300 bg-white px-6 text-[14px] font-semibold text-neutral-900 transition hover:bg-neutral-50 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {activatingTrial ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Activando mes gratis...</span>
-                </>
-              ) : status === 'trialing' ? (
-                'Prueba en curso'
-              ) : isTrialUsed ? (
-                'Prueba ya utilizada'
-              ) : (
-                'Comenzar'
-              )}
-            </button>
-          </div>
-        </div>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-neutral-600 min-h-[56px]">
+                  Obtén <strong className="font-semibold text-neutral-900">la opción más conveniente</strong>. Asegurá tu carta todo el año al mejor precio garantizado.
+                </p>
 
-        {/* =========================================================================
-            TARJETA 2: PLAN MENSUAL ($50.000 ARS / mes)
-           ========================================================================= */}
-        <div className="relative flex flex-col justify-between rounded-[32px] border border-neutral-200 bg-white p-6 sm:p-7 shadow-xs hover:border-neutral-300 transition-all duration-200">
-          <div>
-            <h3 className="text-[26px] font-bold tracking-tight text-neutral-900">
-              {MERCADOPAGO_PLANS.monthly.name}
-            </h3>
+                {/* Precio */}
+                <div className="mt-6 pt-4 border-t border-neutral-100">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-lg font-semibold text-neutral-900">$</span>
+                    <span className="text-3xl sm:text-[38px] font-extrabold tracking-tight text-neutral-900">
+                      {MERCADOPAGO_PLANS.yearly.formattedPrice}
+                    </span>
+                    <span className="text-[13px] font-medium text-neutral-500">
+                      ARS {MERCADOPAGO_PLANS.yearly.interval}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[12px] font-semibold text-emerald-600">
+                    Equivale a solo $41.666 ARS por mes
+                  </p>
+                </div>
 
-            <p className="mt-2 text-[13.5px] leading-relaxed text-neutral-600 min-h-[56px]">
-              Obtén <strong className="font-semibold text-neutral-900">acceso ilimitado</strong> a pedidos por WhatsApp, mozo en mesa, QR de alta resolución y catálogo visual.
-            </p>
-
-            {/* Precio */}
-            <div className="mt-6 pt-4 border-t border-neutral-100">
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-lg font-semibold text-neutral-900">$</span>
-                <span className="text-3xl sm:text-[38px] font-extrabold tracking-tight text-neutral-900">
-                  {MERCADOPAGO_PLANS.monthly.formattedPrice}
-                </span>
-                <span className="text-[13px] font-medium text-neutral-500">
-                  ARS {MERCADOPAGO_PLANS.monthly.interval}
-                </span>
+                {/* Lista de características */}
+                <ul className="mt-6 space-y-2.5 text-[13px] text-neutral-700">
+                  {MERCADOPAGO_PLANS.yearly.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-[#1a73e8] shrink-0 mt-0.5" />
+                      <span className={feature.includes('bonificados') ? 'font-semibold text-neutral-900' : ''}>
+                        {feature}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <p className="mt-1 text-[12px] text-neutral-500">
-                Cobro mensual vía Mercado Pago
-              </p>
-            </div>
 
-            {/* Lista de características */}
-            <ul className="mt-6 space-y-2.5 text-[13px] text-neutral-700">
-              {MERCADOPAGO_PLANS.monthly.features.map((feature) => (
-                <li key={feature} className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#1a73e8] shrink-0 mt-0.5" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="mt-8 pt-4">
-            <button
-              type="button"
-              disabled={loadingPlan !== null}
-              onClick={() => handleMercadoPagoCheckout('monthly')}
-              className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#1a73e8] px-6 text-[14px] font-semibold text-white shadow-sm transition hover:bg-[#1557b0] active:scale-[0.98] disabled:opacity-50"
-            >
-              {loadingPlan === 'monthly' ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Conectando con Mercado Pago...</span>
-                </>
-              ) : (
-                'Comenzar'
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* =========================================================================
-            TARJETA 3: PLAN ANUAL ($500.000 ARS / año) - DESTACADO / MÁS ELEGIDO
-           ========================================================================= */}
-        <div className="relative flex flex-col justify-between rounded-[32px] border-2 border-[#1a73e8] bg-white p-6 sm:p-7 shadow-md transition-all duration-200">
-          {/* Pill superior destacada */}
-          <div className="absolute -top-3.5 left-6 right-6 flex justify-center">
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#1a73e8] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm">
-              <Sparkles className="h-3 w-3" /> Ahorrás $100.000 (2 meses gratis)
-            </span>
-          </div>
-
-          <div className="pt-2">
-            <h3 className="text-[26px] font-bold tracking-tight text-neutral-900">
-              {MERCADOPAGO_PLANS.yearly.name}
-            </h3>
-
-            <p className="mt-2 text-[13.5px] leading-relaxed text-neutral-600 min-h-[56px]">
-              Obtén <strong className="font-semibold text-neutral-900">la opción más conveniente</strong>. Asegurá tu carta todo el año al mejor precio garantizado.
-            </p>
-
-            {/* Precio */}
-            <div className="mt-6 pt-4 border-t border-neutral-100">
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-lg font-semibold text-neutral-900">$</span>
-                <span className="text-3xl sm:text-[38px] font-extrabold tracking-tight text-neutral-900">
-                  {MERCADOPAGO_PLANS.yearly.formattedPrice}
-                </span>
-                <span className="text-[13px] font-medium text-neutral-500">
-                  ARS {MERCADOPAGO_PLANS.yearly.interval}
-                </span>
+              <div className="mt-8 pt-4">
+                <button
+                  type="button"
+                  disabled={loadingPlan !== null}
+                  onClick={() => handleMercadoPagoCheckout('yearly')}
+                  className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#1a73e8] px-6 text-[14px] font-semibold text-white shadow-md transition hover:bg-[#1557b0] active:scale-[0.98] disabled:opacity-50"
+                >
+                  {loadingPlan === 'yearly' ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Conectando con Mercado Pago...</span>
+                    </>
+                  ) : isMonthlyActive ? (
+                    'Mejorar a Plan Anual'
+                  ) : (
+                    'Comenzar'
+                  )}
+                </button>
               </div>
-              <p className="mt-1 text-[12px] font-semibold text-emerald-600">
-                Equivale a solo $41.666 ARS por mes
-              </p>
             </div>
-
-            {/* Lista de características */}
-            <ul className="mt-6 space-y-2.5 text-[13px] text-neutral-700">
-              {MERCADOPAGO_PLANS.yearly.features.map((feature) => (
-                <li key={feature} className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-[#1a73e8] shrink-0 mt-0.5" />
-                  <span className={feature.includes('bonificados') ? 'font-semibold text-neutral-900' : ''}>
-                    {feature}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="mt-8 pt-4">
-            <button
-              type="button"
-              disabled={loadingPlan !== null}
-              onClick={() => handleMercadoPagoCheckout('yearly')}
-              className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#1a73e8] px-6 text-[14px] font-semibold text-white shadow-md transition hover:bg-[#1557b0] active:scale-[0.98] disabled:opacity-50"
-            >
-              {loadingPlan === 'yearly' ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Conectando con Mercado Pago...</span>
-                </>
-              ) : (
-                'Comenzar'
-              )}
-            </button>
-          </div>
+          )}
         </div>
       </div>
     );
