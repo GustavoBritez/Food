@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
-import type { Store } from '@/lib/types';
+import type { Store, SubscriptionStatus } from '@/lib/types';
 import { MERCADOPAGO_PLANS, TRIAL_CONFIG, type PlanId } from '@/lib/mercadopago';
 
 type Props = {
@@ -189,7 +189,7 @@ export function SubscriptionBanner({ store }: Props) {
         </div>
 
         {/* Tarjetas de planes desplegables mientras está en trial */}
-        {showPlansModal && renderPlanCards()}
+        {showPlansModal && renderPlanCards(status)}
       </div>
     );
   }
@@ -241,7 +241,7 @@ export function SubscriptionBanner({ store }: Props) {
         </div>
 
         {errorMsg && renderErrorMessage()}
-        {!isYearly && showPlansModal && renderPlanCards()}
+        {!isYearly && showPlansModal && renderPlanCards(status)}
       </div>
     );
   }
@@ -266,7 +266,7 @@ export function SubscriptionBanner({ store }: Props) {
           </div>
         </div>
 
-        {renderPlanCards()}
+        {renderPlanCards(status)}
       </div>
     );
   }
@@ -287,7 +287,7 @@ export function SubscriptionBanner({ store }: Props) {
       </div>
 
       {errorMsg && renderErrorMessage()}
-      {renderPlanCards()}
+      {renderPlanCards(status)}
     </div>
   );
 
@@ -310,23 +310,23 @@ export function SubscriptionBanner({ store }: Props) {
   }
 
   // Tarjetas de planes filtradas: solo planes superiores o nada si ya tiene anual
-  function renderPlanCards() {
-    const isTrialActive = status === 'trialing' || store.plan_type === 'trial';
+  function renderPlanCards(currentStatus: SubscriptionStatus) {
+    const isTrialActive = currentStatus === 'trialing' || store.plan_type === 'trial';
     const isTrialUsed = Boolean(
       isTrialActive || (store.trial_end && new Date(store.trial_end).getTime() < Date.now())
     );
-    const isMonthlyActive = status === 'active' && store.plan_type === 'monthly';
-    const isYearlyActive = status === 'active' && store.plan_type === 'yearly';
+    const isMonthlyActive = currentStatus === 'active' && store.plan_type === 'monthly';
+    const isYearlyActive = currentStatus === 'active' && store.plan_type === 'yearly';
 
     // Regla de negocio estricta:
     // Si la persona ya tiene un plan asignado entonces no le puede aparecer para comprar dicho plan.
     // Debe aparecerle unicamente un plan superior o nada en caso de tener el plan anual ya asignado.
-    const showTrial = !isTrialUsed && !isTrialActive && status !== 'active';
+    const showTrial = !isTrialUsed && !isTrialActive && currentStatus !== 'active';
     const showMonthly = !isMonthlyActive && !isYearlyActive && !isTrialActive;
     const showYearly = !isYearlyActive;
 
     // En período de prueba (trial), los planes superiores para continuar son Mensual y Anual
-    const canShowMonthlyInTrial = status === 'trialing';
+    const canShowMonthlyInTrial = currentStatus === 'trialing';
     const effectiveShowMonthly = showMonthly || canShowMonthlyInTrial;
 
     const cardCount = [showTrial, effectiveShowMonthly, showYearly].filter(Boolean).length;
@@ -400,7 +400,7 @@ export function SubscriptionBanner({ store }: Props) {
               <div className="mt-8 pt-4">
                 <button
                   type="button"
-                  disabled={activatingTrial || isTrialUsed || status === 'trialing' || status === 'active'}
+                  disabled={activatingTrial || isTrialUsed || currentStatus === 'trialing' || currentStatus === 'active'}
                   onClick={handleActivateTrial}
                   className="inline-flex h-12 w-full items-center justify-center rounded-full border border-neutral-300 bg-white px-6 text-[14px] font-semibold text-neutral-900 transition hover:bg-neutral-50 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
                 >
@@ -409,7 +409,7 @@ export function SubscriptionBanner({ store }: Props) {
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       <span>Activando mes gratis...</span>
                     </>
-                  ) : status === 'trialing' ? (
+                  ) : currentStatus === 'trialing' ? (
                     'Prueba en curso'
                   ) : isTrialUsed ? (
                     'Prueba ya utilizada'
