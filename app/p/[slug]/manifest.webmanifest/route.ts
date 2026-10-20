@@ -81,6 +81,7 @@ export async function GET(
     headers: {
       'Content-Type': 'application/manifest+json; charset=utf-8',
       'Cache-Control': 'public, max-age=60, s-maxage=60',
+      'Access-Control-Allow-Origin': '*',
     },
   });
 }

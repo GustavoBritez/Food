@@ -34,20 +34,40 @@ export function PwaInstallButton({
       return;
     }
 
+    // Si el evento fue capturado tempranamente en <head>, lo tomamos de inmediato
+    if (typeof window !== 'undefined') {
+      const earlyPrompt = (window as unknown as { __pwaPrompt?: BeforeInstallPromptEvent }).__pwaPrompt;
+      if (earlyPrompt) {
+        setDeferredPrompt(earlyPrompt);
+      }
+    }
+
+    const handlePromptReady = () => {
+      const p = (window as unknown as { __pwaPrompt?: BeforeInstallPromptEvent }).__pwaPrompt;
+      if (p) setDeferredPrompt(p);
+    };
+
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      const promptEvt = e as BeforeInstallPromptEvent;
+      (window as unknown as { __pwaPrompt?: BeforeInstallPromptEvent }).__pwaPrompt = promptEvt;
+      setDeferredPrompt(promptEvt);
     };
 
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
+      if (typeof window !== 'undefined') {
+        (window as unknown as { __pwaPrompt?: BeforeInstallPromptEvent | null }).__pwaPrompt = null;
+      }
     };
 
+    window.addEventListener('pwa-prompt-ready', handlePromptReady);
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
+      window.removeEventListener('pwa-prompt-ready', handlePromptReady);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
@@ -60,27 +80,50 @@ export function PwaInstallButton({
 
   const handleInstallClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (deferredPrompt) {
+
+    // 1. Tomar el prompt nativo guardado (en estado o global de window)
+    const promptEvent =
+      deferredPrompt ||
+      (typeof window !== 'undefined'
+        ? (window as unknown as { __pwaPrompt?: BeforeInstallPromptEvent }).__pwaPrompt
+        : null);
+
+    if (promptEvent) {
       try {
-        await deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
+        await promptEvent.prompt();
+        const { outcome } = await promptEvent.userChoice;
         if (outcome === 'accepted') {
           setDeferredPrompt(null);
+          if (typeof window !== 'undefined') {
+            (window as unknown as { __pwaPrompt?: BeforeInstallPromptEvent | null }).__pwaPrompt = null;
+          }
           setIsInstalled(true);
         }
       } catch {
         /* noop */
       }
-    } else {
-      // Si el navegador no soporta prompt nativo directo (iOS Safari o Chrome sin beforeinstallprompt)
-      const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isIOS) {
-        setGuide("En iPhone: tocá Compartir y luego 'Agregar a inicio'");
-      } else {
-        setGuide("En tu navegador: tocá el menú (⋮) y seleccioná 'Instalar app' o 'Agregar a la pantalla principal'");
-      }
-      setTimeout(() => setGuide(null), 6000);
+      return;
     }
+
+    // 2. Si es iPhone (Safari iOS no tiene beforeinstallprompt por política de Apple)
+    const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+      setGuide("Tocá el botón Compartir de Safari y luego 'Agregar a inicio' ⊞ para tener la app en tu pantalla.");
+      setTimeout(() => setGuide(null), 7000);
+      return;
+    }
+
+    // 3. Si en Android/Chrome el evento tarda unos milisegundos en disparar, esperamos brevemente y lanzamos
+    setTimeout(async () => {
+      const latePrompt = (window as unknown as { __pwaPrompt?: BeforeInstallPromptEvent }).__pwaPrompt;
+      if (latePrompt) {
+        try {
+          await latePrompt.prompt();
+        } catch {
+          /* noop */
+        }
+      }
+    }, 300);
   };
 
   const baseStyles =
