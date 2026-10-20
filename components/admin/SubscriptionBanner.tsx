@@ -400,7 +400,7 @@ export function SubscriptionBanner({ store }: Props) {
               <div className="mt-8 pt-4">
                 <button
                   type="button"
-                  disabled={activatingTrial || isTrialUsed || currentStatus === 'trialing' || currentStatus === 'active'}
+                  disabled={activatingTrial || isTrialUsed}
                   onClick={handleActivateTrial}
                   className="inline-flex h-12 w-full items-center justify-center rounded-full border border-neutral-300 bg-white px-6 text-[14px] font-semibold text-neutral-900 transition hover:bg-neutral-50 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
                 >
@@ -409,8 +409,6 @@ export function SubscriptionBanner({ store }: Props) {
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       <span>Activando mes gratis...</span>
                     </>
-                  ) : currentStatus === 'trialing' ? (
-                    'Prueba en curso'
                   ) : isTrialUsed ? (
                     'Prueba ya utilizada'
                   ) : (
