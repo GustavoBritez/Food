@@ -85,6 +85,31 @@ export function FeedView({ store, sections, actions, preview }: Props) {
   const [query, setQuery] = useState('');
   const [toast, setToast] = useState<string | null>(null);
 
+  const [activeCategoryId, setActiveCategoryId] = useState<string>(
+    sections[0]?.category.id ?? ''
+  );
+  const isProgrammaticScroll = useRef(false);
+
+  // Detección de si la app ya corre instalada en modo Standalone (PWA)
+  const [isStandalone, setIsStandalone] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const checkStandalone = () => {
+      setIsStandalone(
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as unknown as { standalone?: boolean }).standalone === true
+      );
+    };
+    checkStandalone();
+  }, []);
+
+  // Sincronizar activeCategoryId inicial cuando cargan las secciones
+  useEffect(() => {
+    if (!activeCategoryId && sections[0]?.category.id) {
+      setActiveCategoryId(sections[0].category.id);
+    }
+  }, [sections, activeCategoryId]);
+
   // Detección de dispositivo para saber si el usuario está en PC o Celular
   const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
@@ -113,7 +138,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
   const activeSlide = slides[active];
   const activeCat = isGridActive
     ? (gridActiveCat ?? sections[0]?.category.id)
-    : (activeSlide?.categoryId ?? sections[0]?.category.id);
+    : (activeCategoryId || activeSlide?.categoryId || sections[0]?.category.id);
 
   const firstIndexByCat = useMemo(() => {
     const map = new Map<string, number>();
@@ -134,8 +159,11 @@ export function FeedView({ store, sections, actions, preview }: Props) {
     if (!root) return;
     const target = root.querySelector<HTMLElement>(`[data-index="${index}"]`);
     if (target) {
-      target.scrollIntoView({ behavior, block: 'start' });
+      isProgrammaticScroll.current = true;
       root.scrollTo({ top: target.offsetTop, behavior });
+      setTimeout(() => {
+        isProgrammaticScroll.current = false;
+      }, 650);
     } else {
       root.scrollTo({ top: index * root.clientHeight, behavior });
     }
@@ -154,11 +182,41 @@ export function FeedView({ store, sections, actions, preview }: Props) {
       } else if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    } else {
-      const targetIndex = firstIndexByCat.get(categoryId) ?? 0;
-      goTo(targetIndex);
+      return;
     }
-  }, [isGridActive, firstIndexByCat, goTo]);
+
+    setActiveCategoryId(categoryId);
+
+    // Centrar la píldora activa en la barra superior suavemente
+    const pillEl = chipsRef.current?.querySelector(
+      `[data-pill-id="${categoryId}"]`
+    ) as HTMLElement | null;
+    pillEl?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+
+    // Buscar el primer plato de esa categoría en el Feed vertical
+    const container = scrollerRef.current;
+    if (!container) return;
+
+    const firstSlideOfCat = container.querySelector(
+      `[data-category-id="${categoryId}"]`
+    ) as HTMLElement | null;
+
+    if (firstSlideOfCat) {
+      isProgrammaticScroll.current = true;
+      const idx = Number(firstSlideOfCat.getAttribute('data-index'));
+      if (!Number.isNaN(idx)) {
+        setActive(idx);
+      }
+      container.scrollTo({
+        top: firstSlideOfCat.offsetTop,
+        behavior: 'smooth',
+      });
+      // Liberar el flag tras completar la animación de scroll
+      setTimeout(() => {
+        isProgrammaticScroll.current = false;
+      }, 650);
+    }
+  }, [isGridActive]);
 
   // Teclado para navegar en PC
   useEffect(() => {
@@ -181,14 +239,31 @@ export function FeedView({ store, sections, actions, preview }: Props) {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
+        if (isProgrammaticScroll.current) return;
+
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {
             const idx = Number(entry.target.getAttribute('data-index'));
-            if (!Number.isNaN(idx)) setActive(idx);
+            if (!Number.isNaN(idx)) {
+              setActive(idx);
+            }
+            const catId = entry.target.getAttribute('data-category-id');
+            if (catId) {
+              setActiveCategoryId(catId);
+              const pillEl = chipsRef.current?.querySelector(
+                `[data-pill-id="${catId}"]`
+              ) as HTMLElement | null;
+              pillEl?.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'center',
+                block: 'nearest',
+              });
+            }
+            break;
           }
-        });
+        }
       },
-      { root, threshold: 0.55 }
+      { root, threshold: [0.55] }
     );
 
     const items = root.querySelectorAll('[data-index]');
@@ -220,17 +295,6 @@ export function FeedView({ store, sections, actions, preview }: Props) {
 
     return () => observer.disconnect();
   }, [isGridActive, sections]);
-
-  // Auto-scroll del chip de categoría en la barra superior
-  useEffect(() => {
-    const container = chipsRef.current;
-    if (!container || !activeCat) return;
-    const btn = container.querySelector<HTMLElement>(`[data-cat="${activeCat}"]`);
-    if (btn) {
-      const left = btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2;
-      container.scrollTo({ left, behavior: 'smooth' });
-    }
-  }, [activeCat]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -296,22 +360,22 @@ export function FeedView({ store, sections, actions, preview }: Props) {
       {/* Barra superior de navegación (adaptativa para Celular y PC a lo ancho) */}
       <header
         className={cn(
-          'fixed inset-x-0 top-0 z-30 pb-6 backdrop-blur-[2px] transition-colors duration-200',
+          'fixed inset-x-0 top-0 z-30 pb-4 backdrop-blur-[2px] transition-colors duration-200',
           isDark
             ? 'bg-gradient-to-b from-black/90 via-black/60 to-transparent text-white'
             : 'bg-gradient-to-b from-white/95 via-white/80 to-transparent text-neutral-900 border-b border-black/5'
         )}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pt-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 pt-3">
           {/* Logo y Nombre del comercio */}
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 shrink-0">
             <button
               type="button"
               onClick={() => setInfoOpen(true)}
               className="flex items-center gap-2 text-left group"
               aria-label="Ver datos del local"
             >
-              <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--accent-fg)] shadow-sm">
+              <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--accent-fg)] shadow-sm transition-transform active:scale-90">
                 {store.logo_url ? (
                   <Image src={store.logo_url} alt={store.name} width={36} height={36} className="h-full w-full object-cover" />
                 ) : (
@@ -327,41 +391,51 @@ export function FeedView({ store, sections, actions, preview }: Props) {
             </button>
           </div>
 
-          {/* Chips de Categorías */}
-          <div ref={chipsRef} className="no-scrollbar flex flex-1 items-center gap-1.5 overflow-x-auto px-2 max-w-xl mx-auto">
-            {sections.map(({ category }) => (
-              <button
-                key={category.id}
-                type="button"
-                data-cat={category.id}
-                onClick={() => scrollToCategory(category.id)}
-                className={cn(
-                  'h-8 shrink-0 rounded-full px-3.5 text-[12.5px] font-semibold backdrop-blur-md transition active:scale-95',
-                  activeCat === category.id
-                    ? store.button_style === 'accent'
-                      ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-md'
+          {/* Carrusel de Categorías con bordes difuminados suaves */}
+          <div
+            ref={chipsRef}
+            className="no-scrollbar flex flex-1 items-center gap-1.5 overflow-x-auto scroll-smooth px-2 py-1 max-w-xl mx-auto [mask-image:linear-gradient(to_right,transparent,black_12px,black_calc(100%-12px),transparent)]"
+            style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+          >
+            {sections.map(({ category }) => {
+              const isActive = activeCat === category.id;
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  data-pill-id={category.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    scrollToCategory(category.id);
+                  }}
+                  className={cn(
+                    'h-8 shrink-0 rounded-full px-3.5 text-[12px] sm:text-[12.5px] font-semibold backdrop-blur-md transition-all duration-300 active:scale-95',
+                    isActive
+                      ? store.button_style === 'accent'
+                        ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-md scale-[1.03]'
+                        : isDark
+                        ? 'bg-white text-neutral-950 shadow-md scale-[1.03]'
+                        : 'bg-neutral-900 text-white shadow-md scale-[1.03]'
                       : isDark
-                      ? 'bg-white text-black shadow-md'
-                      : 'bg-neutral-900 text-white shadow-md'
-                    : isDark
-                    ? 'bg-white/10 text-white/90 ring-1 ring-white/10 hover:bg-white/20'
-                    : 'bg-black/5 text-neutral-700 ring-1 ring-black/10 hover:bg-black/10'
-                )}
-              >
-                {category.name}
-              </button>
-            ))}
+                      ? 'border border-white/15 bg-black/45 text-white/90 backdrop-blur-md hover:bg-black/65'
+                      : 'border border-black/10 bg-white/70 text-neutral-800 backdrop-blur-md hover:bg-white/90'
+                  )}
+                >
+                  {category.name}
+                </button>
+              );
+            })}
           </div>
 
           {/* Acciones de la derecha: Buscador, PWA, Toggle de modo PC, Carrito */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {/* Buscador / Grilla */}
             <button
               type="button"
               onClick={() => setGridOpen(true)}
               className={cn(
-                'grid h-9 w-9 place-items-center rounded-full backdrop-blur-md transition active:scale-95',
-                isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-black/5 text-neutral-800 hover:bg-black/10'
+                'grid h-9 w-9 place-items-center rounded-full backdrop-blur-md transition active:scale-90',
+                isDark ? 'border border-white/15 bg-black/45 text-white hover:bg-black/65' : 'border border-black/10 bg-white/70 text-neutral-800 hover:bg-white/90'
               )}
               title="Buscar platos y ver catálogo"
               aria-label="Buscar"
@@ -634,6 +708,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
             <FeedSlide
               key={slide.product.id}
               index={i}
+              categoryId={slide.categoryId}
               product={slide.product}
               active={i === active}
               near={Math.abs(i - active) <= 1}
@@ -889,16 +964,18 @@ export function FeedView({ store, sections, actions, preview }: Props) {
           </div>
         </div>
 
-        {/* Botón PWA dentro del panel de información */}
-        <div className="mt-5 rounded-2xl bg-canvas p-4 border border-black/5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[14px] font-semibold text-ink">Instalar Menú en tu Celular</p>
-              <p className="text-[12px] text-muted">Accedé sin escribir la dirección ni abrir el navegador</p>
+        {/* Botón PWA dentro del panel de información (oculto si ya está instalada / standalone) */}
+        {!isStandalone && (
+          <div className="mt-5 rounded-2xl bg-canvas p-4 border border-black/5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[14px] font-semibold text-ink">Instalar Menú en tu Celular</p>
+                <p className="text-[12px] text-muted">Accedé sin escribir la dirección ni abrir el navegador</p>
+              </div>
+              <PwaInstallButton variant="button" label="Descargar" className="shrink-0" />
             </div>
-            <PwaInstallButton variant="button" label="Descargar" className="shrink-0" />
           </div>
-        </div>
+        )}
 
         <h3 className="mt-5 text-[12px] font-bold uppercase tracking-wider text-subtle">Categorías del Menú</h3>
         <ul className="mt-2 divide-y divide-black/5">
@@ -937,6 +1014,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
 
 type SlideProps = {
   index: number;
+  categoryId: string;
   product: Product;
   active: boolean;
   near: boolean;
@@ -950,6 +1028,7 @@ type SlideProps = {
 
 function FeedSlide({
   index,
+  categoryId,
   product: p,
   active,
   near,
@@ -973,7 +1052,9 @@ function FeedSlide({
 
   return (
     <section
+      id={`feed-product-${p.id}`}
       data-index={index}
+      data-category-id={categoryId}
       className="relative h-full min-h-dvh w-full snap-start snap-always overflow-hidden bg-neutral-900"
     >
       {p.video_url ? (

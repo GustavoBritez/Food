@@ -21,9 +21,10 @@ export function PwaInstallButton({
 }: Props) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [guide, setGuide] = useState<string | null>(null);
 
   useEffect(() => {
-    // Si ya corre como PWA instalada (standalone), no mostramos nada
+    // Si ya corre como PWA instalada (standalone), marcamos como instalada
     if (
       typeof window !== 'undefined' &&
       (window.matchMedia('(display-mode: standalone)').matches ||
@@ -52,19 +53,33 @@ export function PwaInstallButton({
     };
   }, []);
 
-  // Si el navegador no ofrece el prompt directo o ya está instalada,
-  // no mostramos nada (dejamos que Chrome muestre su propio aviso nativo, 0 alert feo).
-  if (isInstalled || !deferredPrompt) {
+  // Si ya está instalada, no mostramos nada
+  if (isInstalled) {
     return null;
   }
 
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-      setIsInstalled(true);
+  const handleInstallClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setDeferredPrompt(null);
+          setIsInstalled(true);
+        }
+      } catch {
+        /* noop */
+      }
+    } else {
+      // Si el navegador no soporta prompt nativo directo (iOS Safari o Chrome sin beforeinstallprompt)
+      const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        setGuide("En iPhone: tocá Compartir y luego 'Agregar a inicio'");
+      } else {
+        setGuide("En tu navegador: tocá el menú (⋮) y seleccioná 'Instalar app' o 'Agregar a la pantalla principal'");
+      }
+      setTimeout(() => setGuide(null), 6000);
     }
   };
 
@@ -76,14 +91,22 @@ export function PwaInstallButton({
       : 'inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-semibold text-neutral-950 shadow-sm transition-all hover:bg-emerald-400 active:scale-95';
 
   return (
-    <button
-      type="button"
-      onClick={handleInstallClick}
-      className={`${baseStyles} ${className}`}
-      title="Instalar App en tu pantalla de inicio"
-    >
-      <Download className="h-4 w-4 shrink-0" />
-      <span>{label}</span>
-    </button>
+    <div className="relative inline-flex flex-col items-end">
+      <button
+        type="button"
+        onClick={handleInstallClick}
+        className={`${baseStyles} ${className}`}
+        title="Instalar App en tu pantalla de inicio"
+      >
+        <Download className="h-4 w-4 shrink-0" />
+        <span>{label}</span>
+      </button>
+      {guide && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-white/10 bg-neutral-900/95 p-2.5 text-[11.5px] leading-snug text-white shadow-2xl backdrop-blur-md animate-fade-in text-left">
+          <p className="font-semibold text-emerald-400 mb-0.5">¿Cómo instalar?</p>
+          <p className="text-white/90">{guide}</p>
+        </div>
+      )}
+    </div>
   );
 }
