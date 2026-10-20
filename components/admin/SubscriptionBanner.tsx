@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  CreditCard,
   Loader2,
   ShieldCheck,
   Sparkles,
