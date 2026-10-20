@@ -18,6 +18,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { uploadImage, removeImageByUrl } from '@/lib/storage';
+import { ClocheIcon } from '@/components/ClocheIcon';
 import { createClient } from '@/lib/supabase/client';
 import type { ButtonStyle, MenuLayout, MenuTheme, Store } from '@/lib/types';
 import { DEFAULT_ACCENT, normalizeWhatsapp, SLUG_REGEX, slugify } from '@/lib/utils';
@@ -597,8 +598,8 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
               {logoUrl ? (
                 <Image src={logoUrl} alt="Logo" fill sizes="64px" className="object-cover" />
               ) : (
-                <div className="grid h-full w-full place-items-center text-subtle text-xl font-semibold">
-                  {name.charAt(0).toUpperCase() || 'M'}
+                <div className="grid h-full w-full place-items-center bg-neutral-900 text-white">
+                  <ClocheIcon className="h-7 w-7 text-white" />
                 </div>
               )}
             </div>

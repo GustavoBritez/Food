@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
-import { UtensilsCrossed } from 'lucide-react';
+import { ClocheIcon } from '@/components/ClocheIcon';
 import { PublicMenu } from '@/components/menu/PublicMenu';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS, DEMO_SLUG, DEMO_STORE } from '@/lib/demo';
 import { createPublicClient } from '@/lib/supabase/public';
@@ -155,7 +155,7 @@ export default async function PublicMenuPage({ params }: Params) {
               sizes="80px"
             />
           ) : (
-            <UtensilsCrossed className="h-8 w-8 text-neutral-500" />
+            <ClocheIcon className="h-10 w-10 text-white" />
           )}
         </div>
         <h1 className="text-xl font-bold tracking-tight text-neutral-100 sm:text-2xl">

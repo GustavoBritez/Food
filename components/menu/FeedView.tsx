@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { PwaInstallButton } from '@/components/PwaInstallButton';
+import { ClocheIcon } from '@/components/ClocheIcon';
 import { Sheet } from '@/components/ui/Sheet';
 import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 import type { ButtonStyle, Product, PublicStore } from '@/lib/types';
@@ -374,11 +375,11 @@ export function FeedView({ store, sections, actions, preview }: Props) {
               className="flex items-center gap-2 text-left group"
               aria-label="Ver datos del local"
             >
-              <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--accent-fg)] shadow-sm transition-transform active:scale-90">
+              <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-neutral-900 text-white shadow-sm ring-1 ring-white/10 transition-transform active:scale-90">
                 {store.logo_url ? (
                   <Image src={store.logo_url} alt={store.name} width={36} height={36} className="h-full w-full object-cover" />
                 ) : (
-                  initial
+                  <ClocheIcon className="h-5 w-5 text-white" />
                 )}
               </span>
               <div className="min-w-0 hidden sm:block">
@@ -738,11 +739,11 @@ export function FeedView({ store, sections, actions, preview }: Props) {
               </div>
             )}
             <div className="relative z-10 flex flex-col items-center">
-              <span className="grid h-16 w-16 place-items-center overflow-hidden rounded-2xl bg-[var(--accent)] text-2xl font-bold text-[var(--accent-fg)] shadow-2xl ring-2 ring-white/10">
+              <span className="grid h-16 w-16 place-items-center overflow-hidden rounded-2xl bg-neutral-900 text-white shadow-2xl ring-2 ring-white/10">
                 {store.logo_url ? (
                   <Image src={store.logo_url} alt={store.name} width={64} height={64} className="h-full w-full object-cover" />
                 ) : (
-                  initial
+                  <ClocheIcon className="h-8 w-8 text-white" />
                 )}
               </span>
               <h2 className="mt-5 text-2xl font-bold tracking-tight">¡Llegaste al final!</h2>
@@ -950,11 +951,11 @@ export function FeedView({ store, sections, actions, preview }: Props) {
           </div>
         )}
         <div className="flex items-center gap-3.5 pt-1">
-          <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[var(--accent)] text-xl font-bold text-[var(--accent-fg)] shadow-md ring-2 ring-white">
+          <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-neutral-900 text-white shadow-md ring-2 ring-white">
             {store.logo_url ? (
               <Image src={store.logo_url} alt={store.name} width={56} height={56} className="h-full w-full object-cover" />
             ) : (
-              initial
+              <ClocheIcon className="h-7 w-7 text-white" />
             )}
           </span>
           <div className="min-w-0">

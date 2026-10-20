@@ -83,16 +83,12 @@ export function QrModal({ open, onClose, store }: Props) {
             size={240}
             level="H"
             marginSize={2}
-            imageSettings={
-              store.logo_url
-                ? {
-                    src: store.logo_url,
-                    height: 48,
-                    width: 48,
-                    excavate: true,
-                  }
-                : undefined
-            }
+            imageSettings={{
+              src: store.logo_url || '/icons/default-store-logo.png',
+              height: 48,
+              width: 48,
+              excavate: true,
+            }}
           />
         </div>
 

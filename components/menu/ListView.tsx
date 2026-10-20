@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useMemo, useRef, useState } from 'react';
 import { ChevronRight, Search, X } from 'lucide-react';
+import { ClocheIcon } from '@/components/ClocheIcon';
 import { PwaInstallButton } from '@/components/PwaInstallButton';
 import { ProductCard } from './ProductCard';
 import type { PublicStore } from '@/lib/types';
@@ -101,9 +102,9 @@ export function ListView({ store, sections, actions, preview }: Props) {
                     className="h-12 w-12 shrink-0 rounded-2xl object-cover ring-2 ring-white/20 shadow-md"
                   />
                 ) : (
-                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[var(--accent)] text-lg font-semibold text-[var(--accent-fg)] shadow-md">
-                    {initial}
-                  </span>
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-neutral-900 text-white shadow-md ring-2 ring-white/10">
+                    <ClocheIcon className="h-6 w-6 text-white" />
+                  </div>
                 )}
                 <div className="min-w-0">
                   <h1 className="truncate text-[20px] sm:text-[22px] font-bold leading-tight tracking-tight">{store.name}</h1>

@@ -52,7 +52,7 @@ export async function GET(
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: accentColor,
+          backgroundColor: logoUrl ? accentColor : '#18181b',
           overflow: 'hidden',
         }}
       >
@@ -70,16 +70,37 @@ export async function GET(
             }}
           />
         ) : (
-          <span
+          <div
             style={{
-              fontSize: Math.round(size * 0.52),
-              fontWeight: 800,
-              color: '#ffffff',
-              fontFamily: 'sans-serif',
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#18181b',
             }}
           >
-            {initial}
-          </span>
+            <svg
+              width={Math.round(size * 0.54)}
+              height={Math.round(size * 0.54)}
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              {/* Perilla superior / Knob */}
+              <circle cx="12" cy="5.5" r="2.2" fill="#ffffff" />
+              {/* Cuello conector / Neck */}
+              <rect x="11.1" y="7.3" width="1.8" height="1.8" fill="#ffffff" />
+              {/* Cúpula / Dome cloche */}
+              <path
+                d="M6 16.5V14.5C6 11.2 8.7 8.5 12 8.5C15.3 8.5 18 11.2 18 14.5V16.5"
+                stroke="#ffffff"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              {/* Bandeja horizontal redondeada / Platter */}
+              <rect x="3.8" y="16.5" width="16.4" height="2.2" rx="1.1" fill="#ffffff" />
+            </svg>
+          </div>
         )}
       </div>
     ),
