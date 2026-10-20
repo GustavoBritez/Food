@@ -32,7 +32,17 @@ type Props = {
 };
 
 function openExternal(url: string) {
-  window.open(url, '_blank', 'noopener,noreferrer');
+  if (typeof window === 'undefined') return;
+  const isMobileOrPwa =
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
+    (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches);
+
+  if (isMobileOrPwa) {
+    window.location.href = url;
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
 }
 
 export function PublicMenu({ store, categories, products, preview = false }: Props) {

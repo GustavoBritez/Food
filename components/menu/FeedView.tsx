@@ -121,16 +121,17 @@ export function FeedView({ store, sections, actions, preview }: Props) {
     return () => window.removeEventListener('resize', checkDesktop);
   }, []);
 
-  // En PC de escritorio permite elegir entre Catálogo Ancho y Modo Reels
-  const [desktopMode, setDesktopMode] = useState<'grid' | 'reels'>('grid');
+  // Modo de visualización: 'reels' (feed vertical) o 'grid' (catálogo).
+  // Disponible tanto en Celular, PWA como en PC.
+  const [viewMode, setViewMode] = useState<'grid' | 'reels'>('reels');
 
   const scrollerRef = useRef<HTMLDivElement>(null);
   const chipsRef = useRef<HTMLDivElement>(null);
   const desktopGridScrollerRef = useRef<HTMLDivElement>(null);
   const [gridActiveCat, setGridActiveCat] = useState<string | null>(null);
 
-  // La grilla solo está activa si estamos en pantalla grande (md), no estamos en preview y desktopMode es grid
-  const isGridActive = isDesktop && !preview && desktopMode === 'grid';
+  // La grilla está activa si el usuario eligió el modo 'grid' y no estamos en preview
+  const isGridActive = !preview && viewMode === 'grid';
 
   const { liked, toggle } = useLikes(preview ? null : `cartaapp:likes:${store.slug}`);
 
@@ -160,10 +161,14 @@ export function FeedView({ store, sections, actions, preview }: Props) {
     const target = root.querySelector<HTMLElement>(`[data-index="${index}"]`);
     if (target) {
       isProgrammaticScroll.current = true;
-      root.scrollTo({ top: target.offsetTop, behavior });
+      root.style.scrollSnapType = 'none';
+      target.scrollIntoView({ behavior, block: 'start' });
       setTimeout(() => {
+        if (root) {
+          root.style.scrollSnapType = 'y mandatory';
+        }
         isProgrammaticScroll.current = false;
-      }, 650);
+      }, 700);
     } else {
       root.scrollTo({ top: index * root.clientHeight, behavior });
     }
@@ -171,6 +176,14 @@ export function FeedView({ store, sections, actions, preview }: Props) {
   }, []);
 
   const scrollToCategory = useCallback((categoryId: string) => {
+    setActiveCategoryId(categoryId);
+
+    // Centrar la píldora activa en la barra superior suavemente
+    const pillEl = chipsRef.current?.querySelector(
+      `[data-pill-id="${categoryId}"]`
+    ) as HTMLElement | null;
+    pillEl?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+
     if (isGridActive) {
       setGridActiveCat(categoryId);
       const container = desktopGridScrollerRef.current;
@@ -185,15 +198,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
       return;
     }
 
-    setActiveCategoryId(categoryId);
-
-    // Centrar la píldora activa en la barra superior suavemente
-    const pillEl = chipsRef.current?.querySelector(
-      `[data-pill-id="${categoryId}"]`
-    ) as HTMLElement | null;
-    pillEl?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-
-    // Buscar el primer plato de esa categoría en el Feed vertical
+    // Buscar el primer plato de esa categoría en el Feed vertical (Reels)
     const container = scrollerRef.current;
     if (!container) return;
 
@@ -207,14 +212,19 @@ export function FeedView({ store, sections, actions, preview }: Props) {
       if (!Number.isNaN(idx)) {
         setActive(idx);
       }
-      container.scrollTo({
-        top: firstSlideOfCat.offsetTop,
-        behavior: 'smooth',
-      });
-      // Liberar el flag tras completar la animación de scroll
+
+      // CRÍTICO PARA CELULARES Y PWA:
+      // Desactivamos temporalmente el scroll-snap durante el smooth scroll
+      // para que Safari iOS y Android Chrome no cancelen ni aborten el salto.
+      container.style.scrollSnapType = 'none';
+      firstSlideOfCat.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
       setTimeout(() => {
+        if (container) {
+          container.style.scrollSnapType = 'y mandatory';
+        }
         isProgrammaticScroll.current = false;
-      }, 650);
+      }, 700);
     }
   }, [isGridActive]);
 
@@ -270,7 +280,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
     items.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [slides.length, desktopMode]);
+  }, [slides.length, viewMode]);
 
   // Detecta la categoría visible por IntersectionObserver en Catálogo PC
   useEffect(() => {
@@ -357,16 +367,16 @@ export function FeedView({ store, sections, actions, preview }: Props) {
       )}
       style={{ backgroundColor: bgColor }}
     >
-      {/* Barra superior de navegación (adaptativa para Celular y PC a lo ancho) */}
+      {/* Barra superior de navegación (adaptativa para Celular, PWA y PC) */}
       <header
         className={cn(
-          'fixed inset-x-0 top-0 z-30 pb-4 backdrop-blur-[2px] transition-colors duration-200',
+          'fixed inset-x-0 top-0 z-30 pt-[env(safe-area-inset-top,0px)] pb-3 backdrop-blur-[2px] transition-colors duration-200',
           isDark
-            ? 'bg-gradient-to-b from-black/90 via-black/60 to-transparent text-white'
+            ? 'bg-gradient-to-b from-black/95 via-black/70 to-transparent text-white'
             : 'bg-gradient-to-b from-white/95 via-white/80 to-transparent text-neutral-900 border-b border-black/5'
         )}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 pt-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-1.5 sm:gap-3 px-2.5 sm:px-4 pt-2 sm:pt-3">
           {/* Logo y Nombre del comercio */}
           <div className="flex items-center gap-2 min-w-0 shrink-0">
             <button
@@ -443,36 +453,36 @@ export function FeedView({ store, sections, actions, preview }: Props) {
               <Search className="h-4 w-4" />
             </button>
 
-            {/* Selector de modo en PC (Catálogo Ancho vs Reels) */}
+            {/* Selector de modo (Catálogo vs Reels) visible y activo en Celular, PWA y PC */}
             <div className={cn(
-              'hidden md:flex items-center rounded-full p-0.5 border',
+              'flex items-center rounded-full p-0.5 border',
               isDark ? 'bg-white/10 border-white/15' : 'bg-black/5 border-black/10'
             )}>
               <button
                 type="button"
-                onClick={() => setDesktopMode('grid')}
+                onClick={() => setViewMode('grid')}
                 className={cn(
-                  'flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-medium transition',
-                  desktopMode === 'grid'
+                  'flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-[12px] font-medium transition active:scale-95',
+                  viewMode === 'grid'
                     ? (isDark ? 'bg-white text-black shadow-sm font-semibold' : 'bg-neutral-900 text-white shadow-sm font-semibold')
                     : (isDark ? 'text-white/80 hover:text-white' : 'text-neutral-600 hover:text-neutral-900')
                 )}
-                title="Ver catálogo a lo ancho"
+                title="Ver catálogo completo"
               >
-                <LayoutGrid className="h-3.5 w-3.5" /> Catálogo
+                <LayoutGrid className="h-3.5 w-3.5" /> <span className="hidden xs:inline sm:inline">Catálogo</span>
               </button>
               <button
                 type="button"
-                onClick={() => setDesktopMode('reels')}
+                onClick={() => setViewMode('reels')}
                 className={cn(
-                  'flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-medium transition',
-                  desktopMode === 'reels'
+                  'flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-[12px] font-medium transition active:scale-95',
+                  viewMode === 'reels'
                     ? (isDark ? 'bg-white text-black shadow-sm font-semibold' : 'bg-neutral-900 text-white shadow-sm font-semibold')
                     : (isDark ? 'text-white/80 hover:text-white' : 'text-neutral-600 hover:text-neutral-900')
                 )}
-                title="Ver en formato Reels vertical"
+                title="Ver en formato Reels"
               >
-                <Film className="h-3.5 w-3.5" /> Reels
+                <Film className="h-3.5 w-3.5" /> <span className="hidden xs:inline sm:inline">Reels</span>
               </button>
             </div>
 
@@ -516,13 +526,13 @@ export function FeedView({ store, sections, actions, preview }: Props) {
           2) VISTA EN PC (Catálogo ancho a lo ancho O Modo Reels centrado con blur)
          ========================================================================= */}
 
-      {/* A) MODO CATÁLOGO ANCHO PARA PC */}
+      {/* A) MODO CATÁLOGO (Celular, PWA y PC) */}
       <div
         ref={desktopGridScrollerRef}
         className={cn(
-          'h-full min-h-dvh overflow-y-auto overscroll-contain pt-24 pb-16 px-4 md:px-6 transition-colors duration-200',
-          desktopMode === 'grid' && !preview
-            ? 'hidden md:block'
+          'h-full min-h-dvh overflow-y-auto overscroll-contain pt-24 pb-20 px-3 sm:px-4 md:px-6 transition-colors duration-200',
+          isGridActive
+            ? 'block'
             : 'hidden'
         )}
       >
@@ -681,8 +691,8 @@ export function FeedView({ store, sections, actions, preview }: Props) {
       <div
         className={cn(
           'h-full min-h-dvh w-full overflow-hidden',
-          desktopMode === 'grid' && !preview
-            ? 'md:hidden'
+          isGridActive
+            ? 'hidden'
             : 'block'
         )}
       >
@@ -784,25 +794,27 @@ export function FeedView({ store, sections, actions, preview }: Props) {
           </section>
         </div>
 
-        {/* Flechas de navegación prev/next en PC */}
-        <div className="hidden md:flex fixed right-8 bottom-10 z-20 flex-col gap-2">
+        {/* Flechas de navegación prev/next (disponibles en Celular, PWA y PC con botones táctiles) */}
+        <div className="fixed right-3 sm:right-6 md:right-8 bottom-28 sm:bottom-28 md:bottom-10 z-20 flex flex-col gap-2">
           <button
             type="button"
             disabled={active === 0}
             onClick={() => goTo(Math.max(0, active - 1))}
-            className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur-md transition hover:bg-white/20 disabled:opacity-30 disabled:pointer-events-none"
+            className="grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-black/50 text-white backdrop-blur-md border border-white/20 transition active:scale-90 hover:bg-black/70 disabled:opacity-20 disabled:pointer-events-none shadow-xl"
             title="Plato anterior (Flecha Arriba)"
+            aria-label="Plato anterior"
           >
-            <ChevronUp className="h-6 w-6" />
+            <ChevronUp className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
           <button
             type="button"
             disabled={active >= slides.length}
             onClick={() => goTo(Math.min(slides.length, active + 1))}
-            className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur-md transition hover:bg-white/20 disabled:opacity-30 disabled:pointer-events-none"
+            className="grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-black/50 text-white backdrop-blur-md border border-white/20 transition active:scale-90 hover:bg-black/70 disabled:opacity-20 disabled:pointer-events-none shadow-xl"
             title="Siguiente plato (Flecha Abajo)"
+            aria-label="Siguiente plato"
           >
-            <ChevronDown className="h-6 w-6" />
+            <ChevronDown className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         </div>
       </div>
@@ -889,7 +901,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                             const idx = indexById.get(p.id) ?? 0;
                             setGridOpen(false);
                             setQuery('');
-                            setDesktopMode('reels');
+                            setViewMode('reels');
                             requestAnimationFrame(() => goTo(idx, 'auto'));
                           }}
                           className="group relative flex flex-col overflow-hidden rounded-2xl bg-neutral-900 border border-white/10 text-left transition hover:border-white/30 hover:scale-[1.02] active:scale-95"
@@ -1118,7 +1130,7 @@ function FeedSlide({
       </div>
 
       {/* Info y botones del plato */}
-      <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-8 text-white">
+      <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-[max(1.75rem,env(safe-area-inset-bottom,0px))] text-white">
         {index === 0 && (
           <p className="mb-2 flex items-center gap-1 text-[11px] font-semibold text-white/80 animate-bounce">
             <ChevronUp className="h-3.5 w-3.5" /> Deslizá hacia arriba para ver más platos
