@@ -134,6 +134,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
     if (!root) return;
     const target = root.querySelector<HTMLElement>(`[data-index="${index}"]`);
     if (target) {
+      target.scrollIntoView({ behavior, block: 'start' });
       root.scrollTo({ top: target.offsetTop, behavior });
     } else {
       root.scrollTo({ top: index * root.clientHeight, behavior });
