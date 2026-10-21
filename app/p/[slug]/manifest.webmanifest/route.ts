@@ -14,18 +14,20 @@ export async function GET(
   let tagline = 'Pedí desde tu mesa o por WhatsApp';
   let accentColor = '#22c55e';
   let bgColor = '#0a0a0a';
+  let logoUrl: string | null = null;
 
   if (cleanSlug === DEMO_SLUG) {
     storeName = DEMO_STORE.name;
     tagline = DEMO_STORE.tagline || tagline;
     accentColor = DEMO_STORE.accent_color || '#22c55e';
     bgColor = DEMO_STORE.bg_color || '#0a0a0a';
+    logoUrl = DEMO_STORE.logo_url ?? null;
   } else {
     try {
       const supabase = createPublicClient();
       const { data: store } = await supabase
         .from('stores')
-        .select('name, tagline, accent_color, bg_color, theme')
+        .select('name, tagline, accent_color, bg_color, theme, logo_url')
         .eq('slug', cleanSlug)
         .maybeSingle();
 
@@ -34,6 +36,7 @@ export async function GET(
         tagline = store.tagline || `Carta digital de ${store.name}`;
         accentColor = store.accent_color || '#22c55e';
         bgColor = store.bg_color || (store.theme === 'light' ? '#ffffff' : '#0a0a0a');
+        logoUrl = store.logo_url || null;
       }
     } catch (err) {
       console.error('Error fetching store for manifest:', err);
@@ -43,6 +46,10 @@ export async function GET(
   // Short name de máximo 12 caracteres para que no se corte debajo del ícono en el celular
   const shortName =
     storeName.length > 14 ? storeName.slice(0, 12).trim() + '…' : storeName;
+
+  // Si el local tiene un logo subido por el dueño, lo usamos directamente para el icono de la PWA
+  const iconSrc = logoUrl || `/api/pwa-icon/${cleanSlug}?size=512`;
+  const iconSrc192 = logoUrl || `/api/pwa-icon/${cleanSlug}?size=192`;
 
   const manifest = {
     id: `/p/${cleanSlug}`,
@@ -57,19 +64,19 @@ export async function GET(
     theme_color: accentColor,
     icons: [
       {
-        src: `/api/pwa-icon/${cleanSlug}?size=192`,
+        src: iconSrc192,
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: `/api/pwa-icon/${cleanSlug}?size=512`,
+        src: iconSrc,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: `/api/pwa-icon/${cleanSlug}?size=512`,
+        src: iconSrc,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',

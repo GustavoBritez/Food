@@ -101,8 +101,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const description = `${
     menu.store.tagline || `Mirá el menú de ${menu.store.name}`
   } y pedí en la mesa o por WhatsApp.`;
-  const icon192 = `/api/pwa-icon/${slug}?size=192`;
-  const icon512 = `/api/pwa-icon/${slug}?size=512`;
+  const storeLogo = menu.store.logo_url;
+  const icon192 = storeLogo || `/api/pwa-icon/${slug}?size=192`;
+  const icon512 = storeLogo || `/api/pwa-icon/${slug}?size=512`;
 
   return {
     title,

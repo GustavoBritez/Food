@@ -108,16 +108,10 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
     root.scrollTo({ top: el.offsetTop - offset, behavior: 'smooth' });
   }
 
-  // Patrones de fondo SVG optimizados
+  // Patrones de textura sutil sin alterar el color de fondo elegido
   const patternBgClass = useMemo(() => {
     if (bgPattern === 'waves') {
       return 'bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))]';
-    }
-    if (bgPattern === 'paper') {
-      return 'bg-gradient-to-b from-[#fbf8f2] to-[#f4eee2]';
-    }
-    if (bgPattern === 'dots') {
-      return '';
     }
     return '';
   }, [bgPattern]);
@@ -136,37 +130,37 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
         {/* Textura SVG de fondo: Ondas japonesas (Seigaiha) */}
         {bgPattern === 'waves' && (
           <div
-            className="pointer-events-none absolute inset-0 opacity-[0.05] dark:opacity-[0.04]"
+            className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.03]"
             style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H0v-2h20v-2H0V8h20V6H0V4h20V2H0V0h22v40h-2V20.5zM0 20h2v20H0V20zm4 0h2v20H4V20zm4 0h2v20H8V20zm4 0h2v20h-2V20zm4 0h2v20h-2V20zm4 0h2v20h-2V20z' fill='%239C92AC' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E")`,
             }}
           />
         )}
 
-        {/* Textura SVG de fondo: Papel / Granulado sutil */}
+        {/* Textura SVG de fondo: Granulado sutil (sin teñir de sepia) */}
         {bgPattern === 'paper' && (
           <div
-            className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-multiply"
+            className="pointer-events-none absolute inset-0 opacity-[0.03] mix-blend-overlay"
             style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
             }}
           />
         )}
 
-        {/* Textura SVG de fondo: Puntos finos */}
+        {/* Textura SVG de fondo: Trama de puntos finos */}
         {bgPattern === 'dots' && (
           <div
-            className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.07]"
+            className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.03]"
             style={{
-              backgroundImage: `radial-gradient(currentColor 1px, transparent 1px)`,
+              backgroundImage: `radial-gradient(currentColor 0.75px, transparent 0.75px)`,
               backgroundSize: '16px 16px',
             }}
           />
         )}
 
-        {/* Portada Editorial */}
+        {/* Portada Editorial compacta para no tapar la pantalla del celular */}
         {store.cover_url && (
-          <div className="relative h-44 sm:h-64 w-full overflow-hidden bg-neutral-950">
+          <div className="relative h-24 sm:h-36 w-full overflow-hidden bg-neutral-950">
             <Image
               src={store.cover_url}
               alt={store.name}
@@ -176,11 +170,11 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
               className="object-cover opacity-90 transition duration-300"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
-            <div className="absolute bottom-3 left-4 right-4 mx-auto max-w-4xl flex items-end justify-between text-white">
-              <span className="text-[11px] font-semibold tracking-widest uppercase opacity-85">
+            <div className="absolute bottom-2.5 left-4 right-4 mx-auto max-w-4xl flex items-end justify-between text-white">
+              <span className="text-[10.5px] font-semibold tracking-widest uppercase opacity-85">
                 Carta de Autor · Edición Especial
               </span>
-              <PwaInstallButton variant="glass" label="App" className="sm:hidden text-[11px] py-1 px-2.5" />
+              <PwaInstallButton variant="glass" label="App" className="sm:hidden text-[11px] py-0.5 px-2.5" />
             </div>
           </div>
         )}
@@ -195,27 +189,27 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
               : 'border-black/[0.08] bg-white/90 text-neutral-900'
           )}
         >
-          <div className="mx-auto max-w-4xl px-4 pt-4">
+          <div className="mx-auto max-w-4xl px-4 pt-3 pb-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3.5 min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
                 {store.logo_url ? (
                   <Image
                     src={store.logo_url}
                     alt={store.name}
-                    width={52}
-                    height={52}
-                    className="h-13 w-13 shrink-0 rounded-2xl object-cover ring-2 ring-white/20 shadow-md"
+                    width={46}
+                    height={46}
+                    className="h-11 w-11 shrink-0 rounded-2xl object-cover ring-2 ring-white/20 shadow-md"
                   />
                 ) : (
-                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-neutral-900 text-white shadow-md ring-2 ring-white/10">
-                    <ClocheIcon className="h-6 w-6 text-white" />
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-neutral-900 text-white shadow-md ring-2 ring-white/10">
+                    <ClocheIcon className="h-5 w-5 text-white" />
                   </div>
                 )}
                 <div className="min-w-0">
-                  <h1 className={cn('truncate text-[22px] sm:text-[26px] leading-tight', FONT_TITLE_MAP[fontPair])}>
+                  <h1 className={cn('truncate text-[20px] sm:text-[24px] leading-tight', FONT_TITLE_MAP[fontPair])}>
                     {store.name}
                   </h1>
-                  <p className={cn('truncate text-[13px] tracking-wide', isDark ? 'text-white/60' : 'text-neutral-600')}>
+                  <p className={cn('truncate text-[12.5px] tracking-wide', isDark ? 'text-white/60' : 'text-neutral-600')}>
                     {store.tagline || 'Carta de gastronomía y coctelería'}
                   </p>
                 </div>
@@ -229,7 +223,7 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
             </div>
 
             {/* Buscador */}
-            <div className="relative mt-3.5">
+            <div className="relative mt-2.5">
               <Search
                 className={cn(
                   'pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2',
@@ -240,82 +234,88 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar plato, vino, ingrediente o etiqueta..."
-                aria-label="Buscar en la carta"
+                placeholder="Buscar plato, vino, ingrediente…"
                 className={cn(
-                  'h-10 w-full rounded-xl pl-10 pr-9 text-[14.5px] outline-none transition focus:ring-4',
+                  'h-9 w-full rounded-xl pl-9 pr-9 text-[13px] transition outline-none',
                   isDark
-                    ? 'bg-white/10 text-white placeholder:text-white/40 focus:ring-white/10'
-                    : 'bg-black/[0.04] text-neutral-900 placeholder:text-neutral-500 focus:ring-black/5'
+                    ? 'bg-white/10 text-white placeholder-white/40 focus:bg-white/15'
+                    : 'bg-black/[0.04] text-neutral-900 placeholder-neutral-400 focus:bg-white focus:ring-1 focus:ring-black/10'
                 )}
               />
               {query && (
                 <button
                   type="button"
                   onClick={() => setQuery('')}
-                  aria-label="Borrar búsqueda"
-                  className="absolute right-2.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full bg-black/10 text-white"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted hover:text-ink"
+                  aria-label="Limpiar búsqueda"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
 
-            {/* Categorías deslizables */}
-            {!query && filtered.length > 1 ? (
-              <nav className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-3" aria-label="Categorías">
-                {filtered.map(({ category }) => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => scrollToCategory(category.id)}
-                    className={cn(
-                      'h-8.5 shrink-0 rounded-full px-4 text-[13.5px] font-medium transition active:scale-95',
-                      activeCat === category.id
-                        ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm'
-                        : isDark
-                        ? 'bg-white/10 text-white/80 hover:bg-white/20'
-                        : 'bg-black/[0.05] text-neutral-800 hover:bg-black/[0.08]'
-                    )}
-                  >
-                    {category.name}
-                  </button>
-                ))}
-              </nav>
-            ) : (
-              <div className="h-3" />
+            {/* Navegación por Categorías (Píldoras) */}
+            {!query && filtered.length > 1 && (
+              <div className="no-scrollbar -mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4 pb-1">
+                {filtered.map(({ category }) => {
+                  const isActive = activeCat === category.id;
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => scrollToCategory(category.id)}
+                      className={cn(
+                        'shrink-0 rounded-full px-3 py-1 text-[12px] font-medium transition active:scale-95',
+                        isActive
+                          ? 'bg-[var(--accent)] text-[var(--accent-fg)] font-semibold shadow-xs'
+                          : isDark
+                          ? 'bg-white/10 text-white/80 hover:bg-white/15'
+                          : 'bg-black/[0.05] text-neutral-700 hover:bg-black/[0.08]'
+                      )}
+                    >
+                      {category.name}
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
         </header>
 
-        {/* Contenido Editorial Principal */}
-        <main className={cn('mx-auto max-w-4xl px-4 sm:px-6 relative z-10', actions.count > 0 ? 'pb-28' : 'pb-16')}>
+        {/* Contenido Principal de Secciones */}
+        <main className="mx-auto max-w-4xl px-4 py-8 pb-32">
           {filtered.length === 0 ? (
-            <div className="py-24 text-center">
-              <p className="font-semibold text-lg">{query ? 'No encontramos sugerencias' : 'Carta vacía'}</p>
-              <p className={cn('mt-1 text-sm', isDark ? 'text-white/60' : 'text-neutral-500')}>
-                {query ? 'Probá buscando con otro ingrediente o plato.' : 'El restaurante cargará su menú en breve.'}
-              </p>
+            <div className="py-20 text-center">
+              <p className="text-base font-medium opacity-80">No encontramos opciones para “{query}”</p>
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="mt-3 text-xs font-semibold underline underline-offset-4"
+              >
+                Ver todo el menú
+              </button>
             </div>
           ) : (
             filtered.map(({ category, products }) => (
-              <section key={category.id} id={idPrefix + category.id} className="pt-10">
-                {/* Cabecera de Categoría Editorial */}
-                <div className="text-center pb-5 mb-6 border-b border-current/10">
-                  <div className="inline-flex items-center justify-center gap-2 mb-1">
-                    <span className="h-px w-6 sm:w-12 bg-current opacity-25" />
+              <section
+                key={category.id}
+                id={idPrefix + category.id}
+                className="mb-14 scroll-mt-24 last:mb-6"
+              >
+                {/* Encabezado de Categoría Editorial */}
+                <div className="mb-6 text-center">
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="h-px w-8 sm:w-16 bg-current opacity-20" />
                     <h2
                       className={cn(
-                        'text-xl sm:text-2xl font-bold tracking-tight px-2',
+                        'text-[20px] sm:text-[24px] tracking-wide text-ink',
                         FONT_TITLE_MAP[fontPair]
                       )}
                     >
                       {category.name}
                     </h2>
-                    <span className="h-px w-6 sm:w-12 bg-current opacity-25" />
+                    <span className="h-px w-8 sm:w-16 bg-current opacity-20" />
                   </div>
-
-                  {/* Subtítulo u horario opcional de la sección */}
                   {category.subtitle && (
                     <p
                       className={cn(
@@ -328,31 +328,67 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
                   )}
                 </div>
 
-                {/* Lista de Platos Editorial */}
-                <div className="divide-y divide-current/10 space-y-6">
+                {/* Lista de Platos Editorial con protección anti-superposición */}
+                <div className="divide-y divide-current/10 space-y-5">
                   {products.map((p) => {
                     const qty = actions.qtyOf(p.id);
                     const netPrice = showNetPrice ? Math.round(p.price / 1.21) : null;
                     const badges = p.badges ?? [];
 
                     return (
-                      <article key={p.id} className="pt-6 first:pt-0 group">
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                          {/* Columna Izquierda: Título, badges, descripción y desglose */}
+                      <article key={p.id} className="pt-5 first:pt-0 group">
+                        <div className="flex items-start justify-between gap-3 sm:gap-4">
+                          {/* Columna Izquierda: Título, precio, badges, descripción y botones */}
                           <div className="min-w-0 flex-1">
-                            {/* Fila del Título y Precio con Dotted Leader si corresponde */}
-                            <div className="flex items-baseline justify-between gap-3">
-                              <div className="flex flex-wrap items-center gap-2">
+                            {/* Fila del Título y Precio con Dotted Leader fluido */}
+                            {priceFormat === 'inline-dot' ? (
+                              <div className="flex items-baseline gap-2 min-w-0">
                                 <h3
                                   className={cn(
-                                    'text-[17px] sm:text-[18px] font-semibold leading-snug',
+                                    'text-[16px] sm:text-[18px] font-semibold leading-snug break-words',
                                     isDark ? 'text-white' : 'text-neutral-950'
                                   )}
                                 >
                                   {p.name}
                                 </h3>
+                                <span className="flex-1 min-w-[8px] border-b border-dotted border-current/35 mb-1" />
+                                <span className="shrink-0 font-bold tabular-nums text-[var(--accent)] whitespace-nowrap pl-0.5">
+                                  • {formatPrice(p.price)}
+                                </span>
+                              </div>
+                            ) : priceFormat === 'minimal' ? (
+                              <div className="flex items-baseline justify-between gap-2 min-w-0">
+                                <h3
+                                  className={cn(
+                                    'text-[16px] sm:text-[18px] font-semibold leading-snug break-words',
+                                    isDark ? 'text-white' : 'text-neutral-950'
+                                  )}
+                                >
+                                  {p.name}
+                                </h3>
+                                <span className="shrink-0 font-semibold tabular-nums whitespace-nowrap opacity-90">
+                                  {formatPrice(p.price)}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-baseline justify-between gap-2 min-w-0">
+                                <h3
+                                  className={cn(
+                                    'text-[16px] sm:text-[18px] font-semibold leading-snug break-words',
+                                    isDark ? 'text-white' : 'text-neutral-950'
+                                  )}
+                                >
+                                  {p.name}
+                                </h3>
+                                <span className="shrink-0 inline-flex items-center rounded-full bg-[var(--accent)]/15 px-2.5 py-0.5 text-[14px] font-bold tabular-nums text-[var(--accent)] whitespace-nowrap">
+                                  {formatPrice(p.price)}
+                                </span>
+                              </div>
+                            )}
 
-                                {/* Badges gastronómicos */}
+                            {/* Badges gastronómicos debajo del título para no empujar el precio */}
+                            {badges.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-1">
                                 {badges.map((badge) => {
                                   const conf = BADGE_CONFIG[badge];
                                   if (!conf) return null;
@@ -360,7 +396,7 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
                                     <span
                                       key={badge}
                                       className={cn(
-                                        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-medium tracking-wide',
+                                        'inline-flex items-center gap-1 rounded-full border px-2 py-0.2 text-[10px] font-medium tracking-wide',
                                         conf.color
                                       )}
                                     >
@@ -370,31 +406,13 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
                                   );
                                 })}
                               </div>
-
-                              {/* Formato Dotted Line (inline-dot) */}
-                              {priceFormat === 'inline-dot' ? (
-                                <div className="flex items-baseline gap-2 shrink-0">
-                                  <span className="hidden sm:inline border-b border-dotted border-current opacity-30 w-16" />
-                                  <span className="text-[17px] font-bold tabular-nums text-[var(--accent)]">
-                                    • {formatPrice(p.price)}
-                                  </span>
-                                </div>
-                              ) : priceFormat === 'minimal' ? (
-                                <span className="text-[17px] font-semibold tabular-nums shrink-0 opacity-90">
-                                  {formatPrice(p.price)}
-                                </span>
-                              ) : (
-                                <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--accent)]/15 px-2.5 py-0.5 text-[15px] font-bold tabular-nums text-[var(--accent)]">
-                                  {formatPrice(p.price)}
-                                </span>
-                              )}
-                            </div>
+                            )}
 
                             {/* Descripción del plato */}
                             {p.description && (
                               <p
                                 className={cn(
-                                  'mt-1.5 text-[13.5px] sm:text-[14px] leading-relaxed break-words',
+                                  'mt-1.5 text-[13px] sm:text-[14px] leading-relaxed break-words',
                                   isDark ? 'text-neutral-300' : 'text-neutral-600'
                                 )}
                               >
@@ -402,28 +420,19 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
                               </p>
                             )}
 
-                            {/* Desglose de impuesto / IVA si showNetPrice está activado */}
+                            {/* Desglose de impuesto si showNetPrice está activado */}
                             {showNetPrice && netPrice !== null && (
                               <p className="mt-1 text-[11px] font-mono tracking-wide opacity-65">
                                 Base imponible sin IVA (21%): {formatPrice(netPrice)}
                               </p>
                             )}
 
-                            {/* Botones de acción directos */}
-                            <div className="mt-3.5 flex items-center gap-2">
+                            {/* Botones de acción */}
+                            <div className="mt-3 flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => actions.orderAtTable(p)}
-                                className={cn(
-                                  'inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[12px] font-semibold transition active:scale-95 shadow-xs',
-                                  store.button_style === 'accent'
-                                    ? 'bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-105'
-                                    : store.button_style === 'whatsapp'
-                                    ? 'bg-whatsapp text-white hover:brightness-95'
-                                    : isDark
-                                    ? 'bg-white text-black hover:bg-neutral-200'
-                                    : 'bg-neutral-900 text-white hover:bg-black'
-                                )}
+                                className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[12px] font-semibold transition active:scale-95 shadow-xs bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-105"
                                 title="Agregar al pedido de la mesa"
                               >
                                 <HandPlatter className="h-3.5 w-3.5 shrink-0" />
@@ -447,11 +456,11 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
                             </div>
                           </div>
 
-                          {/* Foto opcional del plato */}
+                          {/* Foto opcional del plato (a la derecha con separación estricta) */}
                           {p.photo_url && (
                             <div
                               className={cn(
-                                'relative mt-3 sm:mt-0 h-24 w-full sm:h-24 sm:w-28 shrink-0 overflow-hidden rounded-2xl shadow-xs border',
+                                'relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-2xl shadow-xs border',
                                 isDark
                                   ? 'bg-neutral-800 border-white/10'
                                   : 'bg-black/[0.04] border-black/[0.08]'
@@ -461,7 +470,7 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
                                 src={p.photo_url}
                                 alt={p.name}
                                 fill
-                                sizes="(max-width: 640px) 100vw, 112px"
+                                sizes="96px"
                                 className="object-cover transition duration-300 group-hover:scale-105"
                               />
                             </div>
@@ -493,13 +502,8 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
               isDark ? 'text-neutral-400' : 'text-neutral-600'
             )}
           >
-            {showNetPrice && (
-              <p className="mb-3 text-[11px] font-mono opacity-80">
-                * Precios en Pesos Argentinos con IVA incluido. Se informa el desglose neto conforme a regulaciones vigentes.
-              </p>
-            )}
             <p>Precios sujetos a modificación por el establecimiento. No procesamos pagos en línea.</p>
-            <p className="mt-1 font-medium opacity-75">Carta digital diseñada con Carta App Editorial</p>
+            <p className="mt-1 font-medium opacity-75">Carta digital diseñada con Carta App</p>
           </footer>
         </main>
       </div>

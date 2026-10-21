@@ -62,7 +62,7 @@ export function ListView({ store, sections, actions, preview }: Props) {
       >
         {/* Banner de Portada / Imagen de fondo del local */}
         {store.cover_url && (
-          <div className="relative h-36 sm:h-52 w-full overflow-hidden bg-neutral-950">
+          <div className="relative h-24 sm:h-36 w-full overflow-hidden bg-neutral-950">
             <Image
               src={store.cover_url}
               alt={store.name}

@@ -6,9 +6,10 @@ import {
   BookOpen,
   Camera,
   Check,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   Film,
-  Grid3X3,
   LayoutGrid,
   Loader2,
   Moon,
@@ -105,6 +106,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const presetsScrollRef = useRef<HTMLDivElement>(null);
 
   const applyPreset = (preset: ThemePreset) => {
     setLayout(preset.layout);
@@ -355,16 +357,43 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
       </div>
 
       <form onSubmit={handleSubmit} className="mt-5 space-y-6">
-        {/* 0. Plantillas Rápidas por Rubro */}
+        {/* 0. Plantillas Rápidas por Rubro (Carrusel con flechas) */}
         <div>
           <div className="flex items-center justify-between mb-2.5">
-            <span className="label flex items-center gap-1.5 font-semibold text-ink mb-0">
-              <Sparkles className="h-4 w-4 text-amber-500" /> ✨ Plantillas Rápidas por Rubro
-            </span>
-            <span className="text-[11.5px] text-muted">Aplicá estilo completo en 1 clic</span>
+            <div>
+              <span className="label font-semibold text-ink mb-0">
+                Plantillas Rápidas por Rubro
+              </span>
+              <p className="text-[11.5px] text-muted">Aplicá estilo completo en 1 clic</p>
+            </div>
+
+            {/* Flechas de navegación para el carrusel */}
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => presetsScrollRef.current?.scrollBy({ left: -250, behavior: 'smooth' })}
+                className="grid h-8 w-8 place-items-center rounded-xl border border-black/10 bg-white hover:bg-canvas text-ink transition active:scale-90 shadow-xs"
+                title="Ver plantilla anterior"
+                aria-label="Plantilla anterior"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => presetsScrollRef.current?.scrollBy({ left: 250, behavior: 'smooth' })}
+                className="grid h-8 w-8 place-items-center rounded-xl border border-black/10 bg-white hover:bg-canvas text-ink transition active:scale-90 shadow-xs"
+                title="Ver siguiente plantilla"
+                aria-label="Siguiente plantilla"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
-          <div className="no-scrollbar flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+          <div
+            ref={presetsScrollRef}
+            className="no-scrollbar flex gap-3 overflow-x-auto scroll-smooth pb-2 -mx-1 px-1"
+          >
             {THEME_PRESETS.map((preset) => {
               const isActive =
                 themeConfig.presetId === preset.id ||
@@ -377,7 +406,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
                   key={preset.id}
                   type="button"
                   onClick={() => applyPreset(preset)}
-                  className={`flex min-w-[230px] max-w-[250px] shrink-0 flex-col justify-between rounded-2xl border p-4 text-left transition active:scale-[0.98] ${
+                  className={`flex min-w-[240px] max-w-[260px] shrink-0 flex-col justify-between rounded-2xl border p-4 text-left transition active:scale-[0.98] ${
                     isActive
                       ? 'border-ink bg-black/[0.04] ring-2 ring-ink/20 shadow-sm'
                       : 'border-black/10 bg-white hover:border-black/20 hover:bg-canvas'
@@ -465,26 +494,6 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
 
             <button
               type="button"
-              onClick={() => setLayout('grid')}
-              className={`flex flex-col items-start rounded-2xl border p-4 text-left transition ${
-                layout === 'grid'
-                  ? 'border-ink bg-black/[0.03] ring-2 ring-ink/10'
-                  : 'border-black/10 bg-white hover:bg-canvas'
-              }`}
-            >
-              <div className="flex w-full items-center justify-between">
-                <span className="flex items-center gap-2 text-[14px] font-semibold text-ink">
-                  <Grid3X3 className="h-4 w-4 text-emerald-500" /> Cuadrícula Visual
-                </span>
-                {layout === 'grid' && <Check className="h-4 w-4 text-ink" />}
-              </div>
-              <p className="mt-1 text-[12px] leading-relaxed text-muted">
-                Catálogo en cuadrícula de 2 columnas. Muy ágil y limpio para cafeterías, brunches y heladerías.
-              </p>
-            </button>
-
-            <button
-              type="button"
               onClick={() => setLayout('editorial')}
               className={`flex flex-col items-start rounded-2xl border p-4 text-left transition ${
                 layout === 'editorial'
@@ -499,7 +508,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
                 {layout === 'editorial' && <Check className="h-4 w-4 text-ink" />}
               </div>
               <p className="mt-1 text-[12px] leading-relaxed text-muted">
-                Estilo carta física de autor, hoteles y bodegones. Tipografías refinadas, desglose impositivo y texturas.
+                Estilo carta física de autor, hoteles y bodegones. Tipografías refinadas y acabados elegantes.
               </p>
             </button>
           </div>
@@ -816,82 +825,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
           </div>
         </div>
 
-        {/* 5. Estilo de Botones Principales */}
-        <div>
-          <span className="label flex items-center gap-1.5 font-semibold text-ink">
-            <Sparkles className="h-4 w-4 text-emerald-500" /> Estilo de Botones Principales
-          </span>
-          <p className="text-[12px] text-muted mb-2">
-            Define el color del botón principal de acción (&quot;Pedir en mesa&quot;) en la carta:
-          </p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <button
-              type="button"
-              onClick={() => setButtonStyle('accent')}
-              className={`flex flex-col items-start rounded-2xl border p-3.5 text-left transition ${
-                buttonStyle === 'accent'
-                  ? 'border-ink bg-black/[0.03] ring-2 ring-ink/10'
-                  : 'border-black/10 bg-white hover:bg-canvas'
-              }`}
-            >
-              <div className="flex w-full items-center justify-between">
-                <span className="text-[13px] font-semibold text-ink">Color de Marca</span>
-                {buttonStyle === 'accent' && <Check className="h-4 w-4 text-ink" />}
-              </div>
-              <div
-                className="mt-2.5 flex h-7 w-full items-center justify-center rounded-full text-[11px] font-semibold shadow-xs"
-                style={{ backgroundColor: accentColor, color: '#fff' }}
-              >
-                Pedir en mesa
-              </div>
-              <p className="mt-2 text-[11px] leading-tight text-muted">
-                Usa el color de tu local con texto legible automático.
-              </p>
-            </button>
 
-            <button
-              type="button"
-              onClick={() => setButtonStyle('whatsapp')}
-              className={`flex flex-col items-start rounded-2xl border p-3.5 text-left transition ${
-                buttonStyle === 'whatsapp'
-                  ? 'border-ink bg-black/[0.03] ring-2 ring-ink/10'
-                  : 'border-black/10 bg-white hover:bg-canvas'
-              }`}
-            >
-              <div className="flex w-full items-center justify-between">
-                <span className="text-[13px] font-semibold text-ink">Verde WhatsApp</span>
-                {buttonStyle === 'whatsapp' && <Check className="h-4 w-4 text-ink" />}
-              </div>
-              <div className="mt-2.5 flex h-7 w-full items-center justify-center rounded-full bg-whatsapp text-[11px] font-semibold text-white shadow-xs">
-                Pedir en mesa
-              </div>
-              <p className="mt-2 text-[11px] leading-tight text-muted">
-                Verde WhatsApp oficial para destacar el llamado a la acción.
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setButtonStyle('monochrome')}
-              className={`flex flex-col items-start rounded-2xl border p-3.5 text-left transition ${
-                buttonStyle === 'monochrome'
-                  ? 'border-ink bg-black/[0.03] ring-2 ring-ink/10'
-                  : 'border-black/10 bg-white hover:bg-canvas'
-              }`}
-            >
-              <div className="flex w-full items-center justify-between">
-                <span className="text-[13px] font-semibold text-ink">Monocromático</span>
-                {buttonStyle === 'monochrome' && <Check className="h-4 w-4 text-ink" />}
-              </div>
-              <div className="mt-2.5 flex h-7 w-full items-center justify-center rounded-full bg-neutral-900 text-[11px] font-semibold text-white shadow-xs">
-                Pedir en mesa
-              </div>
-              <p className="mt-2 text-[11px] leading-tight text-muted">
-                Blanco o negro de alto contraste según el tema activo.
-              </p>
-            </button>
-          </div>
-        </div>
 
         {/* Logo */}
         <div>

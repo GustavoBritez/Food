@@ -41,7 +41,9 @@ export async function GET(
     }
   }
 
-  const initial = name.trim().charAt(0).toUpperCase() || 'C';
+  if (logoUrl) {
+    return NextResponse.redirect(logoUrl, 307);
+  }
 
   return new ImageResponse(
     (
