@@ -179,12 +179,28 @@ export function ListView({ store, sections, actions, preview }: Props) {
           ) : (
             filtered.map(({ category, products }) => (
               <section key={category.id} id={idPrefix + category.id} className="pt-8">
-                <div className={cn('flex items-center gap-2 pb-3 mb-3 border-b', isDark ? 'border-white/10' : 'border-black/[0.06]')}>
-                  <h2 className={cn('text-[14px] font-bold uppercase tracking-wider', isDark ? 'text-white/70' : 'text-subtle')}>{category.name}</h2>
-                  <span className={cn('text-[12px]', isDark ? 'text-white/50' : 'text-muted')}>({products.length})</span>
+                <div className={cn('pb-3 mb-3 border-b', isDark ? 'border-white/10' : 'border-black/[0.06]')}>
+                  <div className="flex items-center gap-2">
+                    <h2 className={cn('text-[14px] font-bold uppercase tracking-wider', isDark ? 'text-white/70' : 'text-subtle')}>{category.name}</h2>
+                    <span className={cn('text-[12px]', isDark ? 'text-white/50' : 'text-muted')}>({products.length})</span>
+                  </div>
+                  {category.subtitle && (
+                    <p className={cn('mt-1 text-[13px] italic', isDark ? 'text-white/60' : 'text-muted')}>
+                      {category.subtitle}
+                    </p>
+                  )}
                 </div>
-                {/* Cuadrícula responsiva (1 columna en celular y simulador iPhone, 2 columnas en PC) */}
-                <div className={cn('grid gap-3.5', preview ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2')}>
+                {/* Cuadrícula responsiva: 2 columnas en modo grid, o adaptativa en lista clásica */}
+                <div
+                  className={cn(
+                    'grid gap-3.5',
+                    store.layout === 'grid'
+                      ? 'grid-cols-2 gap-2.5 sm:gap-3.5'
+                      : preview
+                      ? 'grid-cols-1'
+                      : 'grid-cols-1 md:grid-cols-2'
+                  )}
+                >
                   {products.map((p) => (
                     <div
                       key={p.id}

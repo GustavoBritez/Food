@@ -6,7 +6,7 @@ import { Camera, Film, Loader2, Trash2 } from 'lucide-react';
 import { Sheet } from '@/components/ui/Sheet';
 import { uploadImage, uploadVideo } from '@/lib/storage';
 import { createClient } from '@/lib/supabase/client';
-import type { Category, Product } from '@/lib/types';
+import type { Category, Product, ProductBadge } from '@/lib/types';
 
 type Props = {
   open: boolean;
@@ -34,6 +34,7 @@ export function ProductModal({
   const [price, setPrice] = useState<string>('');
   const [categoryId, setCategoryId] = useState('');
   const [available, setAvailable] = useState(true);
+  const [badges, setBadges] = useState<ProductBadge[]>([]);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [order, setOrder] = useState(0);
@@ -53,6 +54,7 @@ export function ProductModal({
       setPrice(String(product.price));
       setCategoryId(product.category_id);
       setAvailable(product.available);
+      setBadges(product.badges ?? []);
       setPhotoUrl(product.photo_url);
       setVideoUrl(product.video_url ?? null);
       setOrder(product.order);
@@ -62,6 +64,7 @@ export function ProductModal({
       setPrice('');
       setCategoryId(categories[0]?.id ?? '');
       setAvailable(true);
+      setBadges([]);
       setPhotoUrl(null);
       setVideoUrl(null);
       setOrder(nextOrder);
@@ -136,6 +139,7 @@ export function ProductModal({
         photo_url: photoUrl,
         video_url: videoUrl,
         available,
+        badges,
         order: Number(order) || 0,
       });
       onClose();
@@ -319,6 +323,42 @@ export function ProductModal({
             onChange={(e) => setDescription(e.target.value)}
             className="w-full rounded-xl border border-black/10 bg-white p-3 text-[14px] text-ink outline-none transition placeholder:text-subtle focus:border-ink/40 focus:ring-4 focus:ring-black/5"
           />
+        </div>
+
+        {/* Etiquetas gastronómicas (badges) */}
+        <div>
+          <span className="label">Etiquetas gastronómicas (opcional)</span>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'destacado', label: '⭐ Destacado' },
+              { id: 'vegano', label: '🌱 Vegano' },
+              { id: 'vegetariano', label: '🥬 Vegetariano' },
+              { id: 'sin_tacc', label: '🌾 Sin TACC' },
+              { id: 'picante', label: '🌶️ Picante' },
+            ].map((badge) => {
+              const active = badges.includes(badge.id as ProductBadge);
+              return (
+                <button
+                  key={badge.id}
+                  type="button"
+                  onClick={() => {
+                    setBadges((prev) =>
+                      active
+                        ? prev.filter((b) => b !== badge.id)
+                        : [...prev, badge.id as ProductBadge]
+                    );
+                  }}
+                  className={`inline-flex items-center rounded-xl border px-3 py-1.5 text-[12px] font-medium transition active:scale-95 ${
+                    active
+                      ? 'border-ink bg-ink text-white shadow-xs font-semibold'
+                      : 'border-black/10 bg-white text-muted hover:bg-canvas'
+                  }`}
+                >
+                  {badge.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Switch disponible */}

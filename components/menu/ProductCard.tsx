@@ -31,6 +31,30 @@ export function ProductCard({
           <h3 className={cn('text-[16px] font-semibold leading-snug tracking-tight break-words', isDark ? 'text-white' : 'text-ink')}>
             {product.name}
           </h3>
+          {product.badges && product.badges.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {product.badges.map((b) => {
+                const labels: Record<string, string> = {
+                  vegano: '🌱 Vegano',
+                  vegetariano: '🥬 Vegetariano',
+                  sin_tacc: '🌾 Sin TACC',
+                  picante: '🌶️ Picante',
+                  destacado: '⭐ Destacado',
+                };
+                return (
+                  <span
+                    key={b}
+                    className={cn(
+                      'inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium',
+                      isDark ? 'bg-white/10 text-white/80' : 'bg-black/5 text-neutral-700'
+                    )}
+                  >
+                    {labels[b] || b}
+                  </span>
+                );
+              })}
+            </div>
+          )}
           {product.description && (
             <p className={cn('mt-1 line-clamp-2 text-[13px] leading-relaxed break-words', isDark ? 'text-white/70' : 'text-muted')}>
               {product.description}

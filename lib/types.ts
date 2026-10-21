@@ -1,6 +1,19 @@
-export type MenuLayout = 'feed' | 'list';
+export type MenuLayout = 'feed' | 'list' | 'grid' | 'editorial';
 export type MenuTheme = 'dark' | 'light';
 export type ButtonStyle = 'accent' | 'whatsapp' | 'monochrome';
+export type FontPair = 'modern' | 'serif' | 'script' | 'mono';
+export type BgPattern = 'none' | 'waves' | 'paper' | 'dots';
+export type PriceFormat = 'badge' | 'inline-dot' | 'minimal';
+export type ProductBadge = 'vegano' | 'vegetariano' | 'sin_tacc' | 'picante' | 'destacado';
+
+export interface ThemeConfig {
+  presetId?: string;
+  fontPair?: FontPair;       // Tipografía de títulos de sección
+  bgPattern?: BgPattern;     // Textura de fondo (ondas orientales, papel crema, etc.)
+  priceFormat?: PriceFormat; // 'inline-dot' -> "Gyozas de cerdo • $11.000"
+  showNetPrice?: boolean;    // Calcula y muestra "Precio sin impuestos Nacionales (IVA 21%)"
+  showWatermark?: boolean;   // Muestra el logo/sello al pie de cada categoría
+}
 
 export type SubscriptionStatus =
   | 'inactive'
@@ -23,7 +36,7 @@ export type Store = {
   tagline: string | null;
   /** Color de marca en HEX (#22c55e) */
   accent_color: string;
-  /** Estilo del menú público: feed (Reels) o list (Lista tradicional) */
+  /** Estilo del menú público: feed, list, grid o editorial */
   layout: MenuLayout;
   /** Tema visual: dark (Modo Oscuro) o light (Modo Claro) */
   theme?: MenuTheme;
@@ -31,6 +44,8 @@ export type Store = {
   bg_color?: string | null;
   /** Estilo de color de los botones principales: accent, whatsapp o monochrome */
   button_style?: ButtonStyle;
+  /** Tokens de diseño tipográfico y visual para motor de plantillas */
+  theme_config?: ThemeConfig;
   created_at?: string;
   /** Campos de facturación Mercado Pago ($50.000 ARS/mes o $500.000 ARS/año, 1 mes gratis) */
   mp_payment_id?: string | null;
@@ -46,6 +61,7 @@ export type Category = {
   id: string;
   store_id: string;
   name: string;
+  subtitle?: string | null;
   order: number;
 };
 
@@ -59,6 +75,7 @@ export type Product = {
   photo_url: string | null;
   video_url: string | null;
   available: boolean;
+  badges?: ProductBadge[];
   order: number;
 };
 
@@ -76,10 +93,12 @@ export type PublicStore = Pick<
   | 'theme'
   | 'bg_color'
   | 'button_style'
+  | 'theme_config'
 > & {
   subscription_status?: SubscriptionStatus;
   plan_type?: 'trial' | 'monthly' | 'yearly' | null;
   trial_end?: string | null;
   current_period_end?: string | null;
 };
+
 

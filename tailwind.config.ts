@@ -22,6 +22,9 @@ const config: Config = {
           'Arial',
           'sans-serif',
         ],
+        serif: ['var(--font-serif)', 'Georgia', 'serif'],
+        script: ['var(--font-script)', 'cursive'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       boxShadow: {
         soft: '0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)',

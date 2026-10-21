@@ -6,12 +6,27 @@ import { Sheet } from '@/components/ui/Sheet';
 import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 import { FeedView } from './FeedView';
 import { ListView } from './ListView';
+import { EditorialView } from './EditorialView';
 import { useCart } from './useCart';
 import type { Category, Product, PublicStore } from '@/lib/types';
 import { buildOrderMessage, orderCount, orderTotal, whatsappUrl, type OrderLine } from '@/lib/order';
 import { cn, DEFAULT_ACCENT, formatPrice, HEX_REGEX, readableTextColor } from '@/lib/utils';
 
 export type MenuSection = { category: Category; products: Product[] };
+
+export interface MenuLayoutStrategyProps {
+  store: PublicStore;
+  sections: MenuSection[];
+  actions: MenuActions;
+  preview: boolean;
+}
+
+const LAYOUT_STRATEGIES = {
+  feed: FeedView,
+  list: ListView,
+  grid: ListView,
+  editorial: EditorialView,
+} as const;
 
 /** Acciones de pedido compartidas por las vistas */
 export type MenuActions = {
@@ -51,14 +66,13 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
   const [cartOpen, setCartOpen] = useState(false);
 
   const accent = HEX_REGEX.test(store.accent_color ?? '') ? store.accent_color : DEFAULT_ACCENT;
-  const layout = store.layout === 'list' ? 'list' : 'feed';
 
   const isDark =
     store.theme === 'light'
       ? false
       : store.theme === 'dark'
       ? true
-      : layout !== 'list';
+      : store.layout === 'feed';
 
   const customBg = store.bg_color && HEX_REGEX.test(store.bg_color) ? store.bg_color : null;
   const defaultBg = isDark ? '#0a0a0a' : '#ffffff';
@@ -152,11 +166,10 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
           preview ? 'max-w-[480px]' : ''
         )}
       >
-        {layout === 'list' ? (
-          <ListView store={store} sections={sections} actions={actions} preview={preview} />
-        ) : (
-          <FeedView store={store} sections={sections} actions={actions} preview={preview} />
-        )}
+        {(() => {
+          const ActiveView = LAYOUT_STRATEGIES[store.layout] ?? FeedView;
+          return <ActiveView store={store} sections={sections} actions={actions} preview={preview} />;
+        })()}
 
         {/* Modal / Sheet del Carrito */}
         <Sheet open={cartOpen} onClose={() => setCartOpen(false)} title="Tu pedido" {...sheetProps}>

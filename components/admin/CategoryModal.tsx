@@ -9,12 +9,13 @@ type Props = {
   open: boolean;
   onClose: () => void;
   category?: Category | null;
-  onSave: (cat: { id?: string; name: string; order: number }) => Promise<void>;
+  onSave: (cat: { id?: string; name: string; subtitle?: string | null; order: number }) => Promise<void>;
   nextOrder: number;
 };
 
 export function CategoryModal({ open, onClose, category, onSave, nextOrder }: Props) {
   const [name, setName] = useState('');
+  const [subtitle, setSubtitle] = useState('');
   const [order, setOrder] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -22,9 +23,11 @@ export function CategoryModal({ open, onClose, category, onSave, nextOrder }: Pr
   useEffect(() => {
     if (category) {
       setName(category.name);
+      setSubtitle(category.subtitle ?? '');
       setOrder(category.order);
     } else {
       setName('');
+      setSubtitle('');
       setOrder(nextOrder);
     }
     setError('');
@@ -44,6 +47,7 @@ export function CategoryModal({ open, onClose, category, onSave, nextOrder }: Pr
       await onSave({
         id: category?.id,
         name: cleanName,
+        subtitle: subtitle.trim() || null,
         order: Number(order) || 0,
       });
       onClose();
@@ -81,6 +85,24 @@ export function CategoryModal({ open, onClose, category, onSave, nextOrder }: Pr
             onChange={(e) => setName(e.target.value)}
             className="input"
           />
+        </div>
+
+        <div>
+          <label htmlFor="cat-subtitle" className="label">
+            Subtítulo u horario opcional
+          </label>
+          <input
+            id="cat-subtitle"
+            type="text"
+            maxLength={180}
+            placeholder="Ej: Disponible de 12 a 15:30hs · Incluye copa de vino"
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
+            className="input"
+          />
+          <p className="mt-1 text-[12px] text-subtle">
+            Se muestra debajo del título de la sección en la carta.
+          </p>
         </div>
 
         <div>

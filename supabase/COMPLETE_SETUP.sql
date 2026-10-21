@@ -33,7 +33,7 @@ create table if not exists public.stores (
   cover_url               text,
   tagline                 text check (tagline is null or char_length(tagline) <= 120),
   accent_color            text not null default '#22c55e' check (accent_color ~ '^#[0-9a-fA-F]{6}$'),
-  layout                  text not null default 'feed' check (layout in ('feed', 'list')),
+  layout                  text not null default 'feed' check (layout in ('feed', 'list', 'grid', 'editorial')),
   theme                   text not null default 'dark' check (theme in ('dark', 'light')),
   bg_color                text check (bg_color is null or bg_color ~ '^#[0-9a-fA-F]{6}$'),
   button_style            text not null default 'accent' check (button_style in ('accent', 'whatsapp', 'monochrome')),
@@ -64,8 +64,8 @@ alter table public.stores add column if not exists mp_payment_id text;
 alter table public.stores add column if not exists mp_preference_id text;
 alter table public.stores add column if not exists mp_merchant_order_id text;
 alter table public.stores drop constraint if exists stores_layout_check;
-update public.stores set layout = 'feed' where layout not in ('feed', 'list');
-alter table public.stores add constraint stores_layout_check check (layout in ('feed', 'list'));
+update public.stores set layout = 'feed' where layout not in ('feed', 'list', 'grid', 'editorial');
+alter table public.stores add constraint stores_layout_check check (layout in ('feed', 'list', 'grid', 'editorial'));
 
 -- Slugs reservados que no pueden ser usados por ningún local
 alter table public.stores drop constraint if exists stores_slug_not_reserved;
@@ -401,5 +401,39 @@ on conflict (id) do update
   set name = excluded.name, price = excluded.price, description = excluded.description;
 
 -- =============================================================================
+-- 7. EXTENSIÓN PARA MOTOR DE PLANTILLAS Y ESTILO EDITORIAL (PATRÓN JSONB)
+-- =============================================================================
+
+-- 1. Ampliar los layouts permitidos en stores ('feed', 'list', 'grid', 'editorial')
+alter table public.stores drop constraint if exists stores_layout_check;
+alter table public.stores add constraint stores_layout_check
+  check (layout in ('feed', 'list', 'grid', 'editorial'));
+
+-- 2. Agregar columna JSONB para tokens de diseño (fuentes, texturas, impuestos, presets)
+alter table public.stores
+  add column if not exists theme_config jsonb not null default '{
+    "presetId": "urban_bar",
+    "fontPair": "modern",
+    "bgPattern": "none",
+    "priceFormat": "badge",
+    "showNetPrice": false,
+    "showWatermark": false
+  }'::jsonb;
+
+-- Validación de seguridad para evitar que suban un JSON gigante malicioso en theme_config
+alter table public.stores drop constraint if exists stores_theme_config_size_check;
+alter table public.stores add constraint stores_theme_config_size_check
+  check (pg_column_size(theme_config) <= 4096);
+
+-- 3. Agregar subtítulo/horario opcional a las categorías (ej. Menú Ejecutivo de 12 a 15:30hs)
+alter table public.categories
+  add column if not exists subtitle text check (subtitle is null or char_length(subtitle) <= 180);
+
+-- 4. Agregar etiquetas gastronómicas (badges) a los productos (vegano, sin_tacc, picante, etc.)
+alter table public.products
+  add column if not exists badges text[] not null default '{}';
+
+-- =============================================================================
 -- ¡FIN DEL SCRIPT! Todo configurado y blindado exitosamente.
 -- =============================================================================
+

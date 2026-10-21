@@ -28,7 +28,9 @@ const getMenu = cache(async (slug: string) => {
 
   const { data: store, error: storeError } = await supabase
     .from('stores')
-    .select('*')
+    .select(
+      'id, name, slug, whatsapp, logo_url, cover_url, tagline, accent_color, layout, theme, bg_color, button_style, theme_config, subscription_status, current_period_end'
+    )
     .eq('slug', clean)
     .maybeSingle();
 
@@ -64,13 +66,13 @@ const getMenu = cache(async (slug: string) => {
   ] = await Promise.all([
     supabase
       .from('categories')
-      .select('id, store_id, name, order')
+      .select('id, store_id, name, subtitle, order')
       .eq('store_id', store.id)
       .order('order', { ascending: true }),
     supabase
       .from('products')
       .select(
-        'id, store_id, category_id, name, description, price, photo_url, video_url, available, order'
+        'id, store_id, category_id, name, description, price, photo_url, video_url, available, badges, order'
       )
       .eq('store_id', store.id)
       .eq('available', true)

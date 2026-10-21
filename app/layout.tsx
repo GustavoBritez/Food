@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Playfair_Display, Caveat } from 'next/font/google';
 import { PwaRegister } from '@/components/PwaRegister';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-serif', display: 'swap' });
+const caveat = Caveat({ subsets: ['latin'], variable: '--font-script', display: 'swap' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
@@ -35,7 +37,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-AR" className={`${inter.variable} h-full`}>
+    <html lang="es-AR" className={`${inter.variable} ${playfair.variable} ${caveat.variable} h-full`}>
       <head>
         <script
           dangerouslySetInnerHTML={{

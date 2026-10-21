@@ -3,24 +3,39 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import {
+  BookOpen,
   Camera,
   Check,
+  FileText,
   Film,
   Grid3X3,
   LayoutGrid,
   Loader2,
   Moon,
   Palette,
+  Receipt,
   RotateCcw,
   Sparkles,
+  Stamp,
   Store as StoreIcon,
   Sun,
   Trash2,
+  Type,
 } from 'lucide-react';
 import { uploadImage, removeImageByUrl } from '@/lib/storage';
 import { ClocheIcon } from '@/components/ClocheIcon';
 import { createClient } from '@/lib/supabase/client';
-import type { ButtonStyle, MenuLayout, MenuTheme, Store } from '@/lib/types';
+import type {
+  BgPattern,
+  ButtonStyle,
+  FontPair,
+  MenuLayout,
+  MenuTheme,
+  PriceFormat,
+  Store,
+  ThemeConfig,
+} from '@/lib/types';
+import { THEME_PRESETS, type ThemePreset } from '@/lib/theme-presets';
 import { DEFAULT_ACCENT, normalizeWhatsapp, SLUG_REGEX, slugify } from '@/lib/utils';
 
 type Props = {
@@ -65,14 +80,22 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
   const [logoUrl, setLogoUrl] = useState<string | null>(store.logo_url);
   const [coverUrl, setCoverUrl] = useState<string | null>(store.cover_url ?? null);
   const [accentColor, setAccentColor] = useState(store.accent_color || DEFAULT_ACCENT);
-  const [layout, setLayout] = useState<MenuLayout>(
-    store.layout === 'list' ? 'list' : 'feed'
-  );
+  const [layout, setLayout] = useState<MenuLayout>(store.layout || 'feed');
   const [theme, setTheme] = useState<MenuTheme>(store.theme || 'dark');
   const [bgColor, setBgColor] = useState<string>(
     store.bg_color || (store.theme === 'light' ? '#ffffff' : '#0a0a0a')
   );
   const [buttonStyle, setButtonStyle] = useState<ButtonStyle>(store.button_style || 'accent');
+  const [themeConfig, setThemeConfig] = useState<ThemeConfig>(
+    store.theme_config || {
+      presetId: 'urban_reels',
+      fontPair: 'modern',
+      bgPattern: 'none',
+      priceFormat: 'badge',
+      showNetPrice: false,
+      showWatermark: false,
+    }
+  );
 
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -82,6 +105,15 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const applyPreset = (preset: ThemePreset) => {
+    setLayout(preset.layout);
+    setTheme(preset.theme);
+    setBgColor(preset.bg_color);
+    setAccentColor(preset.accent_color);
+    setButtonStyle(preset.button_style);
+    setThemeConfig(preset.theme_config);
+  };
 
   // Avisa al dashboard para previsualizar los cambios en vivo en el celular
   useEffect(() => {
@@ -97,6 +129,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
       theme,
       bg_color: bgColor,
       button_style: buttonStyle,
+      theme_config: themeConfig,
     });
   }, [
     name,
@@ -110,6 +143,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
     theme,
     bgColor,
     buttonStyle,
+    themeConfig,
     onPreviewDraft,
   ]);
 
@@ -203,6 +237,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
           theme,
           bg_color: bgColor,
           button_style: buttonStyle,
+          theme_config: themeConfig,
         };
         onUpdate(updatedStore, store.slug !== cleanSlug ? store.slug : undefined);
         setSaved(true);
@@ -223,6 +258,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
         theme,
         bg_color: bgColor,
         button_style: buttonStyle,
+        theme_config: themeConfig,
       };
 
       let finalData: Store | null = null;
@@ -239,6 +275,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
           updateError.code === '23514' ||
           updateError.message?.includes('theme') ||
           updateError.message?.includes('button_style') ||
+          updateError.message?.includes('theme_config') ||
           updateError.message?.includes('layout'))
       ) {
         console.warn('Fallback al guardar columnas principales (migración pendiente):', updateError.message);
@@ -272,6 +309,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
           bg_color: bgColor,
           button_style: buttonStyle,
           layout,
+          theme_config: themeConfig,
         };
       } else if (updateError) {
         if (updateError.code === '23505') {
@@ -316,11 +354,73 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-5 space-y-5">
+      <form onSubmit={handleSubmit} className="mt-5 space-y-6">
+        {/* 0. Plantillas Rápidas por Rubro */}
+        <div>
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="label flex items-center gap-1.5 font-semibold text-ink mb-0">
+              <Sparkles className="h-4 w-4 text-amber-500" /> ✨ Plantillas Rápidas por Rubro
+            </span>
+            <span className="text-[11.5px] text-muted">Aplicá estilo completo en 1 clic</span>
+          </div>
+
+          <div className="no-scrollbar flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+            {THEME_PRESETS.map((preset) => {
+              const isActive =
+                themeConfig.presetId === preset.id ||
+                (layout === preset.layout &&
+                  theme === preset.theme &&
+                  bgColor.toLowerCase() === preset.bg_color.toLowerCase());
+
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => applyPreset(preset)}
+                  className={`flex min-w-[230px] max-w-[250px] shrink-0 flex-col justify-between rounded-2xl border p-4 text-left transition active:scale-[0.98] ${
+                    isActive
+                      ? 'border-ink bg-black/[0.04] ring-2 ring-ink/20 shadow-sm'
+                      : 'border-black/10 bg-white hover:border-black/20 hover:bg-canvas'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[14px] font-bold text-ink leading-tight">{preset.name}</span>
+                      {isActive && <Check className="h-4 w-4 shrink-0 text-ink" />}
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-[11.5px] leading-relaxed text-muted">
+                      {preset.subtitle}
+                    </p>
+                  </div>
+
+                  <div className="mt-3.5 flex items-center justify-between pt-2.5 border-t border-black/[0.06] text-[11px]">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-black/10 shadow-xs"
+                        style={{ backgroundColor: preset.bg_color }}
+                        title={`Fondo: ${preset.bg_color}`}
+                      />
+                      <span
+                        className="h-3.5 w-3.5 rounded-full shadow-xs"
+                        style={{ backgroundColor: preset.accent_color }}
+                        title={`Acento: ${preset.accent_color}`}
+                      />
+                      <span className="font-mono text-[10px] text-muted capitalize">{preset.theme}</span>
+                    </div>
+                    <span className="rounded-md bg-black/[0.06] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-ink">
+                      {preset.layout}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* 1. Estilo de Menú (Layout) */}
         <div>
           <span className="label flex items-center gap-1.5 font-semibold text-ink">
-            <Sparkles className="h-4 w-4 text-amber-500" /> Formato del Menú para tus clientes
+            <LayoutGrid className="h-4 w-4 text-amber-500" /> Formato del Menú para tus clientes
           </span>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
@@ -362,8 +462,211 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
                 Formato tradicional por secciones con buscador instantáneo, fotos compactas y navegación rápida.
               </p>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setLayout('grid')}
+              className={`flex flex-col items-start rounded-2xl border p-4 text-left transition ${
+                layout === 'grid'
+                  ? 'border-ink bg-black/[0.03] ring-2 ring-ink/10'
+                  : 'border-black/10 bg-white hover:bg-canvas'
+              }`}
+            >
+              <div className="flex w-full items-center justify-between">
+                <span className="flex items-center gap-2 text-[14px] font-semibold text-ink">
+                  <Grid3X3 className="h-4 w-4 text-emerald-500" /> Cuadrícula Visual
+                </span>
+                {layout === 'grid' && <Check className="h-4 w-4 text-ink" />}
+              </div>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted">
+                Catálogo en cuadrícula de 2 columnas. Muy ágil y limpio para cafeterías, brunches y heladerías.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setLayout('editorial')}
+              className={`flex flex-col items-start rounded-2xl border p-4 text-left transition ${
+                layout === 'editorial'
+                  ? 'border-ink bg-black/[0.03] ring-2 ring-ink/10'
+                  : 'border-black/10 bg-white hover:bg-canvas'
+              }`}
+            >
+              <div className="flex w-full items-center justify-between">
+                <span className="flex items-center gap-2 text-[14px] font-semibold text-ink">
+                  <BookOpen className="h-4 w-4 text-purple-600" /> Carta Editorial / Autor
+                </span>
+                {layout === 'editorial' && <Check className="h-4 w-4 text-ink" />}
+              </div>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted">
+                Estilo carta física de autor, hoteles y bodegones. Tipografías refinadas, desglose impositivo y texturas.
+              </p>
+            </button>
           </div>
         </div>
+
+        {/* 1.1 Configuración Editorial y Tokens de Diseño */}
+        {layout === 'editorial' && (
+          <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 sm:p-5 space-y-4 animate-fade-in">
+            <div className="flex items-center gap-2 border-b border-black/[0.06] pb-3">
+              <BookOpen className="h-4 w-4 text-purple-600" />
+              <h3 className="text-[14px] font-semibold text-ink">Personalización de Carta Editorial</h3>
+            </div>
+
+            {/* Tipografía de Títulos (FontPair) */}
+            <div>
+              <span className="label flex items-center gap-1.5 font-medium text-ink">
+                <Type className="h-3.5 w-3.5 text-muted" /> Tipografía de Títulos y Secciones
+              </span>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  { id: 'modern', label: 'Moderna', font: 'Sans-serif limpia' },
+                  { id: 'serif', label: 'Elegante Serif', font: 'Hoteles y Bodegones' },
+                  { id: 'script', label: 'Caligráfica', font: 'Autor / Oriental' },
+                  { id: 'mono', label: 'Monospace', font: 'Minimalista chic' },
+                ].map((f) => {
+                  const active = (themeConfig.fontPair || 'modern') === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() =>
+                        setThemeConfig((prev) => ({ ...prev, fontPair: f.id as FontPair }))
+                      }
+                      className={`rounded-xl border p-2.5 text-left transition ${
+                        active
+                          ? 'border-ink bg-white ring-2 ring-ink/15 font-semibold'
+                          : 'border-black/10 bg-white/70 hover:bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12.5px] text-ink">{f.label}</span>
+                        {active && <Check className="h-3 w-3 text-ink" />}
+                      </div>
+                      <p className="mt-0.5 text-[10.5px] text-muted">{f.font}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Textura de Fondo (BgPattern) */}
+            <div>
+              <span className="label flex items-center gap-1.5 font-medium text-ink">
+                <Palette className="h-3.5 w-3.5 text-muted" /> Textura de Fondo
+              </span>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  { id: 'none', label: 'Liso', desc: 'Sin textura' },
+                  { id: 'waves', label: 'Ondas Orientales', desc: 'Efecto Seigaiha' },
+                  { id: 'paper', label: 'Papel Texturado', desc: 'Efecto fibra' },
+                  { id: 'dots', label: 'Puntos Finos', desc: 'Trama sutil' },
+                ].map((p) => {
+                  const active = (themeConfig.bgPattern || 'none') === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() =>
+                        setThemeConfig((prev) => ({ ...prev, bgPattern: p.id as BgPattern }))
+                      }
+                      className={`rounded-xl border p-2.5 text-left transition ${
+                        active
+                          ? 'border-ink bg-white ring-2 ring-ink/15 font-semibold'
+                          : 'border-black/10 bg-white/70 hover:bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12.5px] text-ink">{p.label}</span>
+                        {active && <Check className="h-3 w-3 text-ink" />}
+                      </div>
+                      <p className="mt-0.5 text-[10.5px] text-muted">{p.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Formato de Precio (PriceFormat) */}
+            <div>
+              <span className="label flex items-center gap-1.5 font-medium text-ink">
+                <Receipt className="h-3.5 w-3.5 text-muted" /> Formato de Precios
+              </span>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {[
+                  { id: 'inline-dot', label: 'Punto Guía', example: 'Plato • $11.000' },
+                  { id: 'badge', label: 'Insignia', example: 'Plato [$11.000]' },
+                  { id: 'minimal', label: 'Minimalista', example: 'Plato   $11.000' },
+                ].map((pf) => {
+                  const active = (themeConfig.priceFormat || 'badge') === pf.id;
+                  return (
+                    <button
+                      key={pf.id}
+                      type="button"
+                      onClick={() =>
+                        setThemeConfig((prev) => ({ ...prev, priceFormat: pf.id as PriceFormat }))
+                      }
+                      className={`rounded-xl border p-2.5 text-left transition ${
+                        active
+                          ? 'border-ink bg-white ring-2 ring-ink/15 font-semibold'
+                          : 'border-black/10 bg-white/70 hover:bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12.5px] text-ink">{pf.label}</span>
+                        {active && <Check className="h-3 w-3 text-ink" />}
+                      </div>
+                      <p className="mt-0.5 text-[11px] font-mono text-muted">{pf.example}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Switches: Impuestos e Insignia/Sello */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-1 border-t border-black/[0.06]">
+              {/* Switch Net Price */}
+              <label className="flex items-start gap-3 rounded-xl border border-black/10 bg-white p-3 cursor-pointer hover:bg-black/[0.01]">
+                <input
+                  type="checkbox"
+                  checked={Boolean(themeConfig.showNetPrice)}
+                  onChange={(e) =>
+                    setThemeConfig((prev) => ({ ...prev, showNetPrice: e.target.checked }))
+                  }
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-ink focus:ring-ink"
+                />
+                <div>
+                  <span className="text-[13px] font-semibold text-ink flex items-center gap-1.5">
+                    <Receipt className="h-3.5 w-3.5 text-indigo-600" /> Desglose Sin IVA (21%)
+                  </span>
+                  <p className="mt-0.5 text-[11.5px] text-muted leading-relaxed">
+                    Calcula y muestra la base imponible neta sin IVA, ideal para hoteles y cartas de vinos.
+                  </p>
+                </div>
+              </label>
+
+              {/* Switch Watermark */}
+              <label className="flex items-start gap-3 rounded-xl border border-black/10 bg-white p-3 cursor-pointer hover:bg-black/[0.01]">
+                <input
+                  type="checkbox"
+                  checked={Boolean(themeConfig.showWatermark)}
+                  onChange={(e) =>
+                    setThemeConfig((prev) => ({ ...prev, showWatermark: e.target.checked }))
+                  }
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-ink focus:ring-ink"
+                />
+                <div>
+                  <span className="text-[13px] font-semibold text-ink flex items-center gap-1.5">
+                    <Stamp className="h-3.5 w-3.5 text-amber-600" /> Sello de Autor al Pie
+                  </span>
+                  <p className="mt-0.5 text-[11.5px] text-muted leading-relaxed">
+                    Muestra un sello distintivo artesanal al pie de cada sección del menú.
+                  </p>
+                </div>
+              </label>
+            </div>
+          </div>
+        )}
 
         {/* 2. Tema Visual (Modo Oscuro / Modo Claro) */}
         <div>

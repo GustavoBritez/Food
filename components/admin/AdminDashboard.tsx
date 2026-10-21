@@ -89,12 +89,12 @@ export function AdminDashboard({
   }
 
   // --- Manejo de Categorías ---
-  async function handleSaveCategory(data: { id?: string; name: string; order: number }) {
+  async function handleSaveCategory(data: { id?: string; name: string; subtitle?: string | null; order: number }) {
     if (store.id === 'demo-store' || userId === 'demo-user') {
       if (data.id) {
         setCategories((prev) =>
           prev
-            .map((c) => (c.id === data.id ? { ...c, name: data.name, order: data.order } : c))
+            .map((c) => (c.id === data.id ? { ...c, name: data.name, subtitle: data.subtitle ?? null, order: data.order } : c))
             .sort((a, b) => a.order - b.order)
         );
       } else {
@@ -102,6 +102,7 @@ export function AdminDashboard({
           id: `cat-${Date.now()}`,
           store_id: store.id,
           name: data.name,
+          subtitle: data.subtitle ?? null,
           order: data.order,
         };
         setCategories((prev) => [...prev, created].sort((a, b) => a.order - b.order));
@@ -112,7 +113,7 @@ export function AdminDashboard({
     if (data.id) {
       const { data: updated, error } = await supabase
         .from('categories')
-        .update({ name: data.name, order: data.order })
+        .update({ name: data.name, subtitle: data.subtitle ?? null, order: data.order })
         .eq('id', data.id)
         .select()
         .single();
@@ -128,6 +129,7 @@ export function AdminDashboard({
         .insert({
           store_id: store.id,
           name: data.name,
+          subtitle: data.subtitle ?? null,
           order: data.order,
         })
         .select()
@@ -187,6 +189,7 @@ export function AdminDashboard({
           photo_url: data.photo_url ?? null,
           video_url: data.video_url ?? null,
           available: data.available ?? true,
+          badges: data.badges ?? [],
           order: data.order ?? products.length,
         };
         setProducts((prev) => [...prev, created].sort((a, b) => a.order - b.order));
@@ -228,6 +231,7 @@ export function AdminDashboard({
           photo_url: data.photo_url ?? null,
           video_url: data.video_url ?? null,
           available: data.available ?? true,
+          badges: data.badges ?? [],
           order: data.order ?? 0,
         })
         .select()
@@ -510,13 +514,20 @@ export function AdminDashboard({
                         <div key={category.id} className="card overflow-hidden">
                           {/* Barra de la Categoría */}
                           <div className="flex items-center justify-between border-b border-black/[0.06] bg-canvas/60 px-5 py-3">
-                            <div className="flex items-center gap-2">
-                              <h3 className="text-[15px] font-semibold tracking-tight">
-                                {category.name}
-                              </h3>
-                              <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-subtle shadow-sm">
-                                {categoryProducts.length}
-                              </span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-[15px] font-semibold tracking-tight">
+                                  {category.name}
+                                </h3>
+                                <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-subtle shadow-sm">
+                                  {categoryProducts.length}
+                                </span>
+                              </div>
+                              {category.subtitle && (
+                                <p className="mt-0.5 text-[12px] italic text-muted">
+                                  {category.subtitle}
+                                </p>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-1">
@@ -587,10 +598,22 @@ export function AdminDashboard({
 
                                   {/* Datos del producto */}
                                   <div className="min-w-0 flex-1">
-                                    <div className="flex items-baseline gap-2">
+                                    <div className="flex items-baseline gap-2 flex-wrap">
                                       <h4 className="truncate text-[15px] font-medium leading-snug">
                                         {prod.name}
                                       </h4>
+                                      {prod.badges && prod.badges.length > 0 && (
+                                        <div className="flex items-center gap-1">
+                                          {prod.badges.map((b) => (
+                                            <span
+                                              key={b}
+                                              className="rounded-md bg-black/[0.05] px-1.5 py-0.5 text-[10px] text-muted font-medium"
+                                            >
+                                              {b}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
                                       {!prod.available && (
                                         <span className="rounded bg-black/10 px-1.5 py-0.5 text-[10px] font-semibold text-muted">
                                           Agotado
