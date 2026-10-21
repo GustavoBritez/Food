@@ -221,7 +221,11 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
                 </div>
               </div>
 
-              <PwaInstallButton variant="button" label="Descargar App" className="hidden sm:inline-flex" />
+              <PwaInstallButton
+                variant="button"
+                label="Instalar App"
+                className={cn(store.cover_url ? 'hidden sm:inline-flex' : 'inline-flex')}
+              />
             </div>
 
             {/* Buscador */}

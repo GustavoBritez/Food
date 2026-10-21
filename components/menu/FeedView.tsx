@@ -487,7 +487,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
             </div>
 
             {/* Botón PWA para instalar la app */}
-            <PwaInstallButton variant="glass" label="App" className="hidden sm:inline-flex" />
+            <PwaInstallButton variant="glass" label="App" className="inline-flex text-[11px] py-1 px-2.5" />
 
             {/* Carrito Flotante */}
             {actions.count > 0 && (
