@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { DEMO_SLUG, DEMO_STORE } from '@/lib/demo';
 import { createPublicClient } from '@/lib/supabase/public';
 
