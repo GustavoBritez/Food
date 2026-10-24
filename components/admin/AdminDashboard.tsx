@@ -217,7 +217,7 @@ export function AdminDashboard({
       : '¿Eliminar esta categoría?';
     if (!confirm(msg)) return;
 
-    if (store.id === 'demo-store' || userId === 'demo-user') {
+    if (mainStore.id === 'demo-store' || userId === 'demo-user') {
       setCategories((prev) => prev.filter((c) => c.id !== catId));
       setProducts((prev) => prev.filter((p) => p.category_id !== catId));
       return;
@@ -294,7 +294,7 @@ export function AdminDashboard({
       const { data: created, error } = await supabase
         .from('products')
         .insert({
-          store_id: store.id,
+          store_id: mainStore.id,
           category_id: data.category_id!,
           name: data.name!,
           description: data.description ?? null,
@@ -322,7 +322,7 @@ export function AdminDashboard({
     setProducts((prev) =>
       prev.map((p) => (p.id === product.id ? { ...p, available: nextVal } : p))
     );
-    if (store.id === 'demo-store' || userId === 'demo-user') return;
+    if (mainStore.id === 'demo-store' || userId === 'demo-user') return;
     const { error } = await supabase
       .from('products')
       .update({ available: nextVal })

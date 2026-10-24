@@ -8,6 +8,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   title?: React.ReactNode;
+  description?: React.ReactNode;
   children: React.ReactNode;
   /** Siempre como bottom sheet (no centrado en desktop) */
   forceMobile?: boolean;
@@ -16,7 +17,7 @@ type Props = {
   className?: string;
 };
 
-export function Sheet({ open, onClose, title, children, forceMobile = false, contained = false, className }: Props) {
+export function Sheet({ open, onClose, title, description, children, forceMobile = false, contained = false, className }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -57,8 +58,11 @@ export function Sheet({ open, onClose, title, children, forceMobile = false, con
         <div className={cn('mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-black/10', !forceMobile && 'sm:hidden')} />
         {title && (
           <header className="flex shrink-0 items-center justify-between gap-3 px-5 pb-2 pt-3">
-            <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
-            <button type="button" onClick={onClose} className="icon-btn bg-canvas" aria-label="Cerrar">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+              {description && <p className="text-xs text-subtle mt-0.5 leading-relaxed">{description}</p>}
+            </div>
+            <button type="button" onClick={onClose} className="icon-btn bg-canvas shrink-0" aria-label="Cerrar">
               <X className="h-4 w-4" />
             </button>
           </header>

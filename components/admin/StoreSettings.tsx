@@ -74,7 +74,13 @@ const BG_LIGHT_PRESETS = [
   { name: 'Menta', hex: '#f0fdf4' },
 ];
 
-export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props) {
+export function StoreSettings({
+  store,
+  userId,
+  onUpdate,
+  onPreviewDraft,
+  onDeleteBranch,
+}: Props) {
   const [name, setName] = useState(store.name);
   const [tagline, setTagline] = useState(store.tagline ?? '');
   const [slug, setSlug] = useState(store.slug);
@@ -132,6 +138,7 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
     setBgColor(store.bg_color || (store.theme === 'light' ? '#ffffff' : '#0a0a0a'));
     setButtonStyle(store.button_style || 'accent');
     if (store.theme_config) setThemeConfig(store.theme_config);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.id]);
 
   // Avisa al dashboard para previsualizar los cambios en vivo en el celular
