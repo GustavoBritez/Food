@@ -18,12 +18,17 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const paymentId = body.paymentId;
+    const rawPaymentId = body?.paymentId ? String(body.paymentId).trim() : '';
+
+    // 1. Sanitización Anti-Path Traversal: paymentId de Mercado Pago es estrictamente numérico
+    if (rawPaymentId && !/^\d{5,20}$/.test(rawPaymentId)) {
+      return NextResponse.json({ error: 'ID de pago inválido' }, { status: 400 });
+    }
 
     const admin = createAdminClient();
     const { data: store } = await admin
       .from('stores')
-      .select('id, slug, subscription_status, mp_payment_id, current_period_end')
+      .select('id, slug, subscription_status, plan_type, mp_payment_id, current_period_end')
       .eq('created_by', user.id)
       .maybeSingle();
 
@@ -33,30 +38,36 @@ export async function POST(req: Request) {
 
     let paymentToProcess: any = null;
 
-    if (paymentId) {
-      paymentToProcess = await getPaymentDetails(paymentId);
+    if (rawPaymentId) {
+      paymentToProcess = await getPaymentDetails(rawPaymentId);
     } else {
-      // Si no viene paymentId específico, buscar el último pago en MP asociado a esta tienda
+      // Buscar tanto referencias mensuales como anuales de esta tienda específica
       const token = process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN;
       if (token) {
-        const res = await fetch(
-          `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=5&external_reference=${store.id}::monthly`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        const searchData = await res.json();
-        if (searchData.results && searchData.results.length > 0) {
-          paymentToProcess = searchData.results[0];
-        } else {
-          // Buscar sin filtro exacto
-          const resAll = await fetch(
-            `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=10`,
+        const [resMonthly, resYearly] = await Promise.all([
+          fetch(
+            `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=3&external_reference=${store.id}::monthly`,
             { headers: { Authorization: `Bearer ${token}` } }
-          );
-          const allData = await resAll.json();
-          paymentToProcess = allData.results?.find((p: any) =>
-            p.external_reference?.startsWith(store.id)
-          );
-        }
+          ).then((r) => r.json().catch(() => ({}))),
+          fetch(
+            `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=3&external_reference=${store.id}::yearly`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          ).then((r) => r.json().catch(() => ({}))),
+        ]);
+
+        const combined = [
+          ...(resMonthly?.results || []),
+          ...(resYearly?.results || []),
+        ].filter((p: any) => p.status === 'approved');
+
+        // Ordenar por fecha de aprobación más reciente
+        combined.sort(
+          (a: any, b: any) =>
+            new Date(b.date_approved || b.date_created).getTime() -
+            new Date(a.date_approved || a.date_created).getTime()
+        );
+
+        paymentToProcess = combined[0] || null;
       }
     }
 
@@ -67,10 +78,10 @@ export async function POST(req: Request) {
       });
     }
 
-    // 1. Validar que el pago pertenezca ESTRICTAMENTE a este local
+    // 2. Validar que el pago pertenezca ESTRICTAMENTE a este local
     const matchesStore =
       paymentToProcess.metadata?.store_id === store.id ||
-      paymentToProcess.external_reference?.startsWith(store.id);
+      String(paymentToProcess.external_reference || '').startsWith(store.id);
 
     if (!matchesStore) {
       return NextResponse.json(
@@ -79,54 +90,89 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Determinar plan y validar monto pagado
+    // 3. Validar moneda y antigüedad del pago (Anti-Replay Attack de pagos viejos)
+    const approvedDateMs = new Date(
+      paymentToProcess.date_approved || paymentToProcess.date_created || 0
+    ).getTime();
+    const maxPaymentAgeMs = 7 * 24 * 60 * 60 * 1000; // Máximo 7 días de antigüedad para confirmar manualmente
+
+    if (!approvedDateMs || Date.now() - approvedDateMs > maxPaymentAgeMs) {
+      return NextResponse.json({
+        updated: false,
+        alreadyProcessed: true,
+        error: 'Este pago ya fue procesado anteriormente o ha expirado su ventana de confirmación.',
+      });
+    }
+
+    // 4. Determinar plan y validar monto y moneda
     let plan: 'monthly' | 'yearly' = 'monthly';
     if (
       paymentToProcess.metadata?.plan === 'yearly' ||
-      paymentToProcess.external_reference?.endsWith('::yearly')
+      String(paymentToProcess.external_reference || '').endsWith('::yearly')
     ) {
       plan = 'yearly';
     }
 
     const expectedAmount = plan === 'yearly' ? 500000 : 50000;
-    if (Number(paymentToProcess.transaction_amount) < expectedAmount) {
+    const currency = paymentToProcess.currency_id || 'ARS';
+
+    if (Number(paymentToProcess.transaction_amount) < expectedAmount || currency !== 'ARS') {
       return NextResponse.json(
-        { error: 'El importe abonado no coincide con el valor del plan seleccionado.' },
+        { error: 'El importe o moneda abonada no coincide con el valor del plan seleccionado.' },
         { status: 400 }
       );
     }
 
-    // 3. Idempotencia estricta: si ya se procesó este payment_id, no sumar días duplicados
-    if (
-      store.mp_payment_id === String(paymentToProcess.id) &&
-      store.subscription_status === 'active'
-    ) {
-      return NextResponse.json({
-        updated: false,
-        alreadyProcessed: true,
-        subscription_status: 'active',
-        plan_type: plan,
-        payment_id: paymentToProcess.id,
-        current_period_end: store.current_period_end,
-      });
+    const paymentIdStr = String(paymentToProcess.id);
+    const eventKey = `mp-payment-${paymentIdStr}-approved`;
+
+    // 5. Candado Atómico en Base de Datos (Evita Race Condition con el Webhook y el Replay Attack)
+    const { error: lockError } = await admin.from('mp_webhook_events').insert({
+      id: eventKey,
+      topic: 'payment.approved.confirm',
+    });
+
+    if (lockError) {
+      // Si el código es 23505 (Unique Violation), el Webhook o una llamada previa ya acreditó este pago
+      if (lockError.code === '23505' || store.mp_payment_id === paymentIdStr) {
+        return NextResponse.json({
+          updated: false,
+          alreadyProcessed: true,
+          subscription_status: store.subscription_status,
+          plan_type: store.plan_type || plan,
+          payment_id: paymentIdStr,
+          current_period_end: store.current_period_end,
+        });
+      }
+      throw lockError;
     }
 
+    // 6. Sumar días respetando el saldo de días vigentes que ya tuviera el local
     const daysToAdd = plan === 'yearly' ? 365 : 30;
-    const periodEnd = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000).toISOString();
+    const currentEndMs = store.current_period_end
+      ? new Date(store.current_period_end).getTime()
+      : 0;
+    const baseTimeMs = Math.max(Date.now(), currentEndMs);
+    const periodEnd = new Date(baseTimeMs + daysToAdd * 86400 * 1000).toISOString();
 
-    await admin
+    const { error: updateErr } = await admin
       .from('stores')
       .update({
         subscription_status: 'active',
-        plan_type: plan === 'yearly' ? 'yearly' : 'monthly',
-        mp_payment_id: String(paymentToProcess.id),
+        plan_type: plan,
+        mp_payment_id: paymentIdStr,
         current_period_end: periodEnd,
       })
       .eq('id', store.id);
 
+    if (updateErr) {
+      // Si falló la actualización de la tienda, liberamos el candado para permitir reintento
+      await admin.from('mp_webhook_events').delete().eq('id', eventKey);
+      throw updateErr;
+    }
+
     try {
       revalidatePath(`/p/${store.slug}`);
-      revalidatePath('/admin');
     } catch {
       /* noop */
     }
@@ -135,7 +181,7 @@ export async function POST(req: Request) {
       updated: true,
       subscription_status: 'active',
       plan_type: plan,
-      payment_id: paymentToProcess.id,
+      payment_id: paymentIdStr,
       current_period_end: periodEnd,
     });
   } catch (err: unknown) {

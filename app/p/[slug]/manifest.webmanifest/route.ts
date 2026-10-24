@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { DEMO_SLUG, DEMO_STORE } from '@/lib/demo';
 import { createPublicClient } from '@/lib/supabase/public';
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 export async function GET(
   _req: Request,
@@ -87,7 +87,7 @@ export async function GET(
   return NextResponse.json(manifest, {
     headers: {
       'Content-Type': 'application/manifest+json; charset=utf-8',
-      'Cache-Control': 'public, max-age=60, s-maxage=60',
+      'Cache-Control': 'public, max-age=3600, s-maxage=3600',
       'Access-Control-Allow-Origin': '*',
     },
   });

@@ -571,6 +571,7 @@ export function FeedView({ store, sections, actions, preview }: Props) {
                           muted
                           loop
                           playsInline
+                          preload="none"
                           onMouseEnter={(e) => e.currentTarget.play().catch(() => undefined)}
                           onMouseLeave={(e) => e.currentTarget.pause()}
                           className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"

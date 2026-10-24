@@ -59,13 +59,13 @@ const VIDEO_EXT: Record<string, string> = {
   'video/webm': 'webm',
   'video/quicktime': 'mov',
 };
-const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 4 * 1024 * 1024; // 4 MB máx. para proteger egress de Supabase
 
 /** Sube un video corto (sin recomprimir) a menus/{userId}/{uuid}.ext */
 export async function uploadVideo(supabase: SupabaseClient, userId: string, file: File) {
   const ext = VIDEO_EXT[file.type];
   if (!ext) throw new Error('El video tiene que ser MP4, WEBM o MOV.');
-  if (file.size > MAX_VIDEO_BYTES) throw new Error('El video es muy pesado (máx. 25 MB). Probá con uno más corto.');
+  if (file.size > MAX_VIDEO_BYTES) throw new Error('El video es muy pesado (máx. 4 MB). Probá con uno más corto o comprimido.');
 
   const path = `${userId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {

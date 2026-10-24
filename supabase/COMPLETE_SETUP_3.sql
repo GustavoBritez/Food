@@ -117,6 +117,7 @@ create table if not exists public.mp_webhook_events (
 -- 2. ÍNDICES B-TREE PARA ALTO RENDIMIENTO (+1.000 BARES)
 -- =============================================================================
 create index if not exists stores_created_by_idx on public.stores (created_by);
+create index if not exists stores_whatsapp_idx on public.stores (whatsapp);
 create index if not exists stores_mp_payment_id_idx on public.stores (mp_payment_id);
 create index if not exists stores_subscription_status_idx on public.stores (subscription_status);
 create index if not exists categories_store_id_idx on public.categories (store_id);
@@ -230,10 +231,22 @@ alter table public.products              enable row level security;
 alter table public.mp_webhook_events     enable row level security;
 
 -- Permiso explícito de lectura para PostgREST / Supabase
-grant select on table public.stores to anon, authenticated;
+-- PENTESTING FIX: Ocultar mp_payment_id, created_by y campos sensibles a usuarios no autenticados (anon)
+revoke select on table public.stores from anon;
+
+grant select (
+  id, name, slug, whatsapp, logo_url, cover_url, tagline,
+  accent_color, layout, theme, bg_color, button_style,
+  theme_config, subscription_status, current_period_end
+) on table public.stores to anon;
+
+grant select on table public.stores to authenticated, service_role;
 grant select on table public.categories to anon, authenticated;
 grant select on table public.products to anon, authenticated;
-grant select on table public.mp_webhook_events to authenticated;
+
+-- mp_webhook_events solo accesible por el backend (service_role)
+revoke all on table public.mp_webhook_events from anon, authenticated;
+grant all on table public.mp_webhook_events to service_role;
 
 -- STORES:
 -- Lectura pública para comensales
@@ -291,7 +304,7 @@ create policy "products: escritura del dueño" on public.products
 -- =============================================================================
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
-  'menus', 'menus', true, 26214400, -- 25 MB máx. por archivo
+  'menus', 'menus', true, 4194304, -- 4 MB máx. por archivo (protección FinOps contra videos crudos gigantes)
   array[
     'image/jpeg', 'image/png', 'image/webp', 'image/gif',
     'video/mp4', 'video/webm', 'video/quicktime'
@@ -301,6 +314,11 @@ on conflict (id) do update
   set public = excluded.public,
       file_size_limit = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
+
+-- Ajuste inmediato si el bucket ya existía previamente con cuota mayor:
+update storage.buckets
+set file_size_limit = 4194304
+where id = 'menus';
 
 -- Políticas de aislamiento de Storage: cada dueño solo opera en su carpeta /{auth.uid()}/
 drop policy if exists "menus: el dueño lista su carpeta" on storage.objects;
@@ -433,7 +451,29 @@ alter table public.categories
 alter table public.products
   add column if not exists badges text[] not null default '{}';
 
+-- 1. Restringir badges exclusivamente a valores válidos y máximo 5 etiquetas por plato (Anti-DoS)
+alter table public.products drop constraint if exists products_badges_valid_check;
+alter table public.products add constraint products_badges_valid_check
+  check (
+    cardinality(badges) <= 5
+    and badges <@ array['vegano', 'vegetariano', 'sin_tacc', 'picante', 'destacado']::text[]
+  );
+
+-- 2. Blindaje Anti-SSRF y Anti-XSS en todas las columnas de URLs (solo HTTPS permitido)
+alter table public.stores drop constraint if exists stores_urls_https_check;
+alter table public.stores add constraint stores_urls_https_check
+  check (
+    (logo_url is null or (logo_url ~ '^https://[^\s]+$' and char_length(logo_url) <= 500))
+    and (cover_url is null or (cover_url ~ '^https://[^\s]+$' and char_length(cover_url) <= 500))
+  );
+
+alter table public.products drop constraint if exists products_urls_https_check;
+alter table public.products add constraint products_urls_https_check
+  check (
+    (photo_url is null or (photo_url ~ '^https://[^\s]+$' and char_length(photo_url) <= 500))
+    and (video_url is null or (video_url ~ '^https://[^\s]+$' and char_length(video_url) <= 500))
+  );
+
 -- =============================================================================
 -- ¡FIN DEL SCRIPT! Todo configurado y blindado exitosamente.
 -- =============================================================================
-
