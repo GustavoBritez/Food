@@ -22,16 +22,19 @@ export async function POST(req: Request) {
       const body = await req.json();
       if (body?.plan === 'yearly') {
         plan = 'yearly';
+      } else if (body?.plan === 'extra_branch') {
+        plan = 'extra_branch';
       }
     } catch {
       // default monthly
     }
 
-    // 3. Obtener el local del usuario
+    // 3. Obtener el local principal del usuario (casa matriz)
     const { data: store, error: storeError } = await supabase
       .from('stores')
       .select('id, name, slug, subscription_status, plan_type, current_period_end')
       .eq('created_by', user.id)
+      .is('parent_store_id', null)
       .maybeSingle();
 
     if (storeError || !store) {
@@ -42,17 +45,20 @@ export async function POST(req: Request) {
     }
 
     // 3.1 Evitar cobros accidentales si ya tiene una suscripción paga vigente con más de 7 días restantes
-    const isAlreadyPaidActive =
-      store.subscription_status === 'active' &&
-      store.plan_type !== 'trial' &&
-      store.current_period_end &&
-      new Date(store.current_period_end).getTime() > Date.now() + 7 * 86400 * 1000;
+    // (Aplica solo para suscripción del plan base mensual/anual, no para compra de puntos de venta extras)
+    if (plan !== 'extra_branch') {
+      const isAlreadyPaidActive =
+        store.subscription_status === 'active' &&
+        store.plan_type !== 'trial' &&
+        store.current_period_end &&
+        new Date(store.current_period_end).getTime() > Date.now() + 7 * 86400 * 1000;
 
-    if (isAlreadyPaidActive) {
-      return NextResponse.json(
-        { error: 'Tu local ya cuenta con una suscripción activa vigente.' },
-        { status: 400 }
-      );
+      if (isAlreadyPaidActive) {
+        return NextResponse.json(
+          { error: 'Tu local ya cuenta con una suscripción activa vigente.' },
+          { status: 400 }
+        );
+      }
     }
 
     // 3.2 Sanitizar siteUrl sin barra final

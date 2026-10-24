@@ -35,10 +35,12 @@ export function SubscriptionBanner({ store }: Props) {
     const billingParam = params.get('billing');
     const statusParam = params.get('status') || params.get('collection_status');
     const paymentId = params.get('payment_id') || params.get('collection_id');
+    const isExtraReturn = billingParam === 'extra_branch_success';
 
     if (
-      (billingParam === 'success' || statusParam === 'approved' || paymentId) &&
-      status !== 'active'
+      isExtraReturn ||
+      ((billingParam === 'success' || statusParam === 'approved' || paymentId) &&
+      status !== 'active')
     ) {
       setCheckingPayment(true);
       fetch('/api/mercadopago/confirm', {
@@ -49,7 +51,7 @@ export function SubscriptionBanner({ store }: Props) {
         .then((res) => res.json())
         .then((data) => {
           if (data.updated) {
-            window.location.href = '/admin?confirmed=1';
+            window.location.href = isExtraReturn ? '/admin?extra_confirmed=1' : '/admin?confirmed=1';
           } else {
             setTimeout(() => {
               window.location.href = '/admin';

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Check,
   ChevronRight,
@@ -60,7 +60,10 @@ export function AdminDashboard({
   const activeStore = stores.find((s) => s.id === selectedStoreId) || mainStore;
   const isBranch = activeStore.id !== mainStore.id;
   const branches = stores.filter((s) => s.id !== mainStore.id);
-  const MAX_INCLUDED_BRANCHES = 2;
+  const BASE_INCLUDED_BRANCHES = 2; // + 1 casa matriz = 3 locales en total incluidos en el plan base
+  const extraPurchased = mainStore.extra_branches_purchased || 0;
+  const maxBranches = BASE_INCLUDED_BRANCHES + extraPurchased;
+  const maxTotalStores = 3 + extraPurchased;
 
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -83,6 +86,16 @@ export function AdminDashboard({
   // Toasts de copiado
   const [copiedWp, setCopiedWp] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Alerta de confirmación de sucursal o food truck extra pagado con Mercado Pago
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('extra_confirmed') === '1') {
+      alert('¡Punto de venta adicional acreditado con éxito! Ya podés crear tu nueva sucursal o food truck.');
+      window.history.replaceState({}, '', '/admin');
+    }
+  }, []);
 
   const supabase = createClient();
 
@@ -485,12 +498,6 @@ export function AdminDashboard({
                 value={selectedStoreId}
                 onChange={(e) => {
                   if (e.target.value === '__NEW__') {
-                    if (branches.length >= MAX_INCLUDED_BRANCHES) {
-                      alert(
-                        `Ya utilizaste las ${MAX_INCLUDED_BRANCHES} sucursales / food trucks incluidas en tu suscripción de $50.000 ARS/mes.\n\nPara sumar sucursales adicionales ($15.000 ARS/mes c/u), contactanos por WhatsApp.`
-                      );
-                      return;
-                    }
                     setBranchModalOpen(true);
                     return;
                   }
@@ -505,9 +512,9 @@ export function AdminDashboard({
                   </option>
                 ))}
                 <option value="__NEW__">
-                  {branches.length >= MAX_INCLUDED_BRANCHES
-                    ? `+ Agregar sucursal adicional ($15.000/mes)`
-                    : `+ Nueva Sucursal o Food Truck (${branches.length}/${MAX_INCLUDED_BRANCHES} incluidos)`}
+                  {branches.length >= maxBranches
+                    ? `+ Sumar local o food truck extra ($25.000)`
+                    : `+ Nueva Sucursal o Food Truck (${branches.length}/${maxBranches} incluidos)`}
                 </option>
               </select>
             </div>
@@ -963,8 +970,12 @@ export function AdminDashboard({
         open={branchModalOpen}
         onClose={() => setBranchModalOpen(false)}
         mainStore={mainStore}
+        branchesCount={branches.length}
         userId={userId}
         onCreated={handleBranchCreated}
+        onExtraSlotPurchased={(updatedStore) => {
+          handleStoreUpdated(updatedStore);
+        }}
       />
 
       <CategoryModal

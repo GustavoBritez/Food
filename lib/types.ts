@@ -57,6 +57,8 @@ export type Store = {
   current_period_end?: string | null;
   /** ID del local principal si esta tienda es una sucursal o food truck */
   parent_store_id?: string | null;
+  /** Cantidad de cupos extras comprados para sucursales o food trucks ($25.000 ARS c/u) */
+  extra_branches_purchased?: number;
 };
 
 export type Category = {

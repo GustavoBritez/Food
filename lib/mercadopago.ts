@@ -1,4 +1,8 @@
-export type PlanId = 'monthly' | 'yearly';
+export type PlanId = 'monthly' | 'yearly' | 'extra_branch';
+
+export const EXTRA_BRANCH_PRICE = 25000;
+export const BASE_INCLUDED_STORES = 3; // 1 casa matriz + 2 sucursales o food trucks
+export const BASE_INCLUDED_BRANCHES = 2; // Máximo de sucursales incluidas sin costo adicional
 
 export type PlanConfig = {
   id: PlanId;
@@ -29,6 +33,7 @@ export const MERCADOPAGO_PLANS: Record<PlanId, PlanConfig> = {
       'Función "Pedir en mesa" para mozos',
       'Generador de Códigos QR para imprimir',
       'Panel de edición en vivo y fotos ilimitadas',
+      'Incluye hasta 3 locales (1 matriz + 2 sucursales/food trucks)',
     ],
   },
   yearly: {
@@ -47,6 +52,24 @@ export const MERCADOPAGO_PLANS: Record<PlanId, PlanConfig> = {
       'Equivale a solo $41.666 ARS por mes',
       'Precio congelado y protegido por 12 meses',
       'Soporte prioritario para tu local',
+      'Incluye hasta 3 locales (1 matriz + 2 sucursales/food trucks)',
+    ],
+  },
+  extra_branch: {
+    id: 'extra_branch',
+    name: 'Punto de Venta Adicional',
+    tagline: 'Sucursal o Food Truck adicional',
+    description: 'Habilita un **nuevo local a la calle o food truck adicional** en tu red. Hereda tu catálogo y tiene su propio QR y WhatsApp.',
+    price: EXTRA_BRANCH_PRICE,
+    formattedPrice: '25.000',
+    currency: 'ARS',
+    interval: 'por local extra',
+    features: [
+      'Punto de venta o Food Truck adicional',
+      'Hereda automáticamente tu catálogo de platos',
+      'Enlace propio y Código QR independiente',
+      'Número de WhatsApp exclusivo para pedidos',
+      'Filtro de platos disponibles en 1 clic',
     ],
   },
 };
@@ -112,7 +135,10 @@ export async function createPreference(params: {
     ],
     payer: params.userEmail ? { email: params.userEmail } : undefined,
     back_urls: {
-      success: `${params.siteUrl}/admin?billing=success`,
+      success:
+        params.plan === 'extra_branch'
+          ? `${params.siteUrl}/admin?billing=extra_branch_success`
+          : `${params.siteUrl}/admin?billing=success`,
       failure: `${params.siteUrl}/admin?billing=failure`,
       pending: `${params.siteUrl}/admin?billing=pending`,
     },

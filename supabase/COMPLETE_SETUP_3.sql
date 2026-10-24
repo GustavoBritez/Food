@@ -66,6 +66,7 @@ alter table public.stores add column if not exists trial_end timestamptz;
 alter table public.stores add column if not exists mp_payment_id text;
 alter table public.stores add column if not exists mp_preference_id text;
 alter table public.stores add column if not exists mp_merchant_order_id text;
+alter table public.stores add column if not exists extra_branches_purchased int not null default 0;
 alter table public.stores drop constraint if exists stores_layout_check;
 update public.stores set layout = 'feed' where layout not in ('feed', 'list', 'grid', 'editorial');
 alter table public.stores add constraint stores_layout_check check (layout in ('feed', 'list', 'grid', 'editorial'));
@@ -219,6 +220,7 @@ begin
       NEW.mp_payment_id := null;
       NEW.mp_preference_id := null;
       NEW.mp_merchant_order_id := null;
+      NEW.extra_branches_purchased := 0;
     elsif TG_OP = 'UPDATE' then
       if (NEW.subscription_status is distinct from OLD.subscription_status) or
          (NEW.plan_type is distinct from OLD.plan_type) or
@@ -226,7 +228,8 @@ begin
          (NEW.current_period_end is distinct from OLD.current_period_end) or
          (NEW.mp_payment_id is distinct from OLD.mp_payment_id) or
          (NEW.mp_preference_id is distinct from OLD.mp_preference_id) or
-         (NEW.mp_merchant_order_id is distinct from OLD.mp_merchant_order_id) then
+         (NEW.mp_merchant_order_id is distinct from OLD.mp_merchant_order_id) or
+         (NEW.extra_branches_purchased is distinct from OLD.extra_branches_purchased) then
         raise exception 'Acceso denegado: No está permitido modificar columnas de facturación directamente.';
       end if;
     end if;
@@ -240,6 +243,41 @@ create trigger tr_protect_stores_billing
   before insert or update on public.stores
   for each row
   execute function public.protect_stores_billing_columns();
+
+-- Trigger Anti-Abuso: Control estricto de hasta 3 locales en plan base (1 matriz + 2 sucursales/food trucks) + cupos extras ($25.000 ARS c/u)
+create or replace function public.check_store_branch_limit()
+returns trigger
+language plpgsql
+security definer
+as $$
+declare
+  parent_extra int := 0;
+  current_count int := 0;
+begin
+  if NEW.parent_store_id is not null then
+    select coalesce(extra_branches_purchased, 0)
+      into parent_extra
+      from public.stores
+     where id = NEW.parent_store_id;
+
+    select count(*)
+      into current_count
+      from public.stores
+     where parent_store_id = NEW.parent_store_id;
+
+    if current_count >= (2 + parent_extra) then
+      raise exception 'Límite de locales alcanzado (% de % sucursales/food trucks permitidos). Adquirí un punto de venta adicional ($25.000 ARS) para continuar.', current_count, (2 + parent_extra);
+    end if;
+  end if;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists tr_check_store_branch_limit on public.stores;
+create trigger tr_check_store_branch_limit
+  before insert on public.stores
+  for each row
+  execute function public.check_store_branch_limit();
 
 -- =============================================================================
 -- 4. ROW LEVEL SECURITY (RLS) & PRIVACIDAD

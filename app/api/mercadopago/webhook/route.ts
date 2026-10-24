@@ -114,9 +114,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
     }
 
-    // 5. CASO A: Pago Aprobado -> Activar o Extender Suscripción
+    // 5. CASO A: Pago Aprobado -> Activar o Extender Suscripción o Cupo de Sucursal
     if (paymentStatus === 'approved') {
-      const expectedAmount = plan === 'yearly' ? 500000 : 50000;
+      const expectedAmount =
+        plan === 'yearly' ? 500000 : plan === 'extra_branch' ? 25000 : 50000;
       const currency = (payment as any).currency_id || 'ARS';
 
       if (Number(payment.transaction_amount) < expectedAmount || currency !== 'ARS') {
@@ -126,13 +127,29 @@ export async function POST(req: Request) {
 
       const { data: currentStore, error: fetchErr } = await admin
         .from('stores')
-        .select('id, slug, mp_payment_id, subscription_status, current_period_end')
+        .select('id, slug, mp_payment_id, subscription_status, current_period_end, extra_branches_purchased')
         .eq('id', storeId)
         .maybeSingle();
 
       if (fetchErr) throw fetchErr;
       if (!currentStore) {
         return NextResponse.json({ received: true, ignored: 'Store not found' }, { status: 200 });
+      }
+
+      // Si es la compra de un punto de venta o food truck adicional ($25.000 ARS)
+      if (plan === 'extra_branch') {
+        const nextExtra = (currentStore.extra_branches_purchased || 0) + 1;
+        const { error: updateErr } = await admin
+          .from('stores')
+          .update({
+            extra_branches_purchased: nextExtra,
+          })
+          .eq('id', storeId);
+
+        if (updateErr) throw updateErr;
+
+        await admin.from('mp_webhook_events').insert({ id: eventKey, topic: 'extra_branch.approved' });
+        return NextResponse.json({ received: true, status: 'extra_branch_activated' }, { status: 200 });
       }
 
       // Si ya fue procesado por /api/mercadopago/confirm, registramos idempotencia y salimos sin duplicar días
