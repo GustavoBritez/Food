@@ -7,6 +7,7 @@ import type { Category, Product, PublicStore } from './types';
 export const DEMO_SLUG = 'demo';
 
 export const DEMO_STORE: PublicStore = {
+  id: 'demo-store',
   name: 'Restaurante de Prueba',
   slug: DEMO_SLUG,
   whatsapp: '5491128989237',
@@ -20,6 +21,35 @@ export const DEMO_STORE: PublicStore = {
   button_style: 'accent',
   theme_config: {
     presetId: 'urban_reels',
+    fontPair: 'modern',
+    bgPattern: 'none',
+    priceFormat: 'badge',
+    showNetPrice: false,
+    showWatermark: false,
+  },
+  plan_type: 'monthly',
+  subscription_status: 'active',
+  current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+};
+
+export const DEMO_BRANCH_SLUG = 'demo-truck';
+
+export const DEMO_BRANCH_STORE: PublicStore = {
+  id: 'demo-truck',
+  parent_store_id: 'demo-store',
+  name: 'Food Truck Plaza',
+  slug: DEMO_BRANCH_SLUG,
+  whatsapp: '5491128989237',
+  logo_url: null,
+  cover_url: 'https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?auto=format&fit=crop&w=1200&q=80',
+  tagline: 'Punto móvil · Burgers y Cervezas al paso',
+  accent_color: '#f97316',
+  layout: 'feed',
+  theme: 'dark',
+  bg_color: '#0a0a0a',
+  button_style: 'accent',
+  theme_config: {
+    presetId: 'urban_bar',
     fontPair: 'modern',
     bgPattern: 'none',
     priceFormat: 'badge',

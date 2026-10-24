@@ -14,16 +14,18 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-  const { data: store } = await supabase
+  const { data: stores } = await supabase
     .from('stores')
     .select('slug')
-    .eq('created_by', user.id)
-    .maybeSingle();
+    .eq('created_by', user.id);
 
-  if (!store) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  if (!stores || stores.length === 0) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-  const body = (await request.json().catch(() => ({}))) as { previousSlug?: unknown };
-  const slugs = new Set<string>([store.slug as string]);
+  const body = (await request.json().catch(() => ({}))) as { previousSlug?: unknown; slug?: unknown };
+  const slugs = new Set<string>(stores.map((s) => s.slug as string));
+  if (typeof body.slug === 'string' && SLUG_REGEX.test(body.slug)) {
+    slugs.add(body.slug);
+  }
   if (typeof body.previousSlug === 'string' && SLUG_REGEX.test(body.previousSlug)) {
     slugs.add(body.previousSlug);
   }

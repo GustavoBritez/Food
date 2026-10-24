@@ -55,6 +55,8 @@ export type Store = {
   subscription_status?: SubscriptionStatus;
   trial_end?: string | null;
   current_period_end?: string | null;
+  /** ID del local principal si esta tienda es una sucursal o food truck */
+  parent_store_id?: string | null;
 };
 
 export type Category = {
@@ -76,6 +78,8 @@ export type Product = {
   video_url: string | null;
   available: boolean;
   badges?: ProductBadge[];
+  /** IDs de sucursales o food trucks donde este plato está oculto */
+  excluded_store_ids?: string[];
   order: number;
 };
 
@@ -94,6 +98,8 @@ export type PublicStore = Pick<
   | 'bg_color'
   | 'button_style'
   | 'theme_config'
+  | 'id'
+  | 'parent_store_id'
 > & {
   subscription_status?: SubscriptionStatus;
   plan_type?: 'trial' | 'monthly' | 'yearly' | null;

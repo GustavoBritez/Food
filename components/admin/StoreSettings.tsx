@@ -44,6 +44,7 @@ type Props = {
   userId: string;
   onUpdate: (updated: Store, prevSlug?: string) => void;
   onPreviewDraft?: (draft: Partial<Store>) => void;
+  onDeleteBranch?: (branchId: string) => void;
 };
 
 const COLOR_PRESETS = [
@@ -116,6 +117,22 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
     setButtonStyle(preset.button_style);
     setThemeConfig(preset.theme_config);
   };
+
+  // Sincroniza el formulario cuando el usuario cambia de sucursal en el selector
+  useEffect(() => {
+    setName(store.name);
+    setTagline(store.tagline ?? '');
+    setSlug(store.slug);
+    setWhatsapp(store.whatsapp);
+    setLogoUrl(store.logo_url);
+    setCoverUrl(store.cover_url ?? null);
+    setAccentColor(store.accent_color || DEFAULT_ACCENT);
+    setLayout(store.layout || 'feed');
+    setTheme(store.theme || 'dark');
+    setBgColor(store.bg_color || (store.theme === 'light' ? '#ffffff' : '#0a0a0a'));
+    setButtonStyle(store.button_style || 'accent');
+    if (store.theme_config) setThemeConfig(store.theme_config);
+  }, [store.id]);
 
   // Avisa al dashboard para previsualizar los cambios en vivo en el celular
   useEffect(() => {
@@ -1012,6 +1029,27 @@ export function StoreSettings({ store, userId, onUpdate, onPreviewDraft }: Props
             )}
           </button>
         </div>
+
+        {/* Zona para eliminar sucursal si no es el local principal */}
+        {store.parent_store_id && onDeleteBranch && (
+          <div className="mt-10 rounded-2xl border border-red-500/20 bg-red-500/[0.04] p-5">
+            <h4 className="text-[14.5px] font-semibold text-red-700">Zona de peligro: Eliminar este punto de venta</h4>
+            <p className="mt-1 text-[13px] text-muted leading-relaxed">
+              Al eliminar esta sucursal o food truck, sus comensales ya no podrán acceder a <strong>/p/{store.slug}</strong>. Tus platos y categorías de la casa matriz quedarán intactos.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(`¿Estás seguro de que deseás eliminar el punto de venta "${store.name}"? Esta acción no se puede deshacer.`)) {
+                  onDeleteBranch(store.id);
+                }
+              }}
+              className="mt-3.5 inline-flex items-center gap-1.5 rounded-xl border border-red-600/30 bg-white px-3.5 py-2 text-[13px] font-medium text-red-600 shadow-sm transition hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" /> Eliminar sucursal
+            </button>
+          </div>
+        )}
       </form>
     </div>
   );

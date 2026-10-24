@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { ClocheIcon } from '@/components/ClocheIcon';
 import { PublicMenu } from '@/components/menu/PublicMenu';
-import { DEMO_CATEGORIES, DEMO_PRODUCTS, DEMO_SLUG, DEMO_STORE } from '@/lib/demo';
+import { DEMO_CATEGORIES, DEMO_PRODUCTS, DEMO_SLUG, DEMO_STORE, DEMO_BRANCH_SLUG, DEMO_BRANCH_STORE } from '@/lib/demo';
 import { createPublicClient } from '@/lib/supabase/public';
 import type { Category, Product, PublicStore } from '@/lib/types';
 
@@ -24,12 +24,21 @@ const getMenu = cache(async (slug: string) => {
     };
   }
 
+  if (clean === DEMO_BRANCH_SLUG) {
+    return {
+      store: DEMO_BRANCH_STORE,
+      categories: DEMO_CATEGORIES,
+      products: DEMO_PRODUCTS.filter((p) => !p.excluded_store_ids?.includes('demo-truck')),
+      isSubscribed: true,
+    };
+  }
+
   const supabase = createPublicClient();
 
   const { data: store, error: storeError } = await supabase
     .from('stores')
     .select(
-      'id, name, slug, whatsapp, logo_url, cover_url, tagline, accent_color, layout, theme, bg_color, button_style, theme_config, subscription_status, current_period_end'
+      'id, name, slug, whatsapp, logo_url, cover_url, tagline, accent_color, layout, theme, bg_color, button_style, theme_config, subscription_status, current_period_end, parent_store_id'
     )
     .eq('slug', clean)
     .maybeSingle();
@@ -43,11 +52,28 @@ const getMenu = cache(async (slug: string) => {
 
   if (!store) return null;
 
+  // Si es una sucursal o Food Truck, hereda el estado de suscripción de la casa matriz (parent_store_id)
+  let effectiveSubStatus = store.subscription_status;
+  let effectivePeriodEnd = store.current_period_end;
+
+  if (store.parent_store_id) {
+    const { data: parentStore } = await supabase
+      .from('stores')
+      .select('subscription_status, current_period_end')
+      .eq('id', store.parent_store_id)
+      .maybeSingle();
+
+    if (parentStore) {
+      effectiveSubStatus = parentStore.subscription_status || effectiveSubStatus;
+      effectivePeriodEnd = parentStore.current_period_end || effectivePeriodEnd;
+    }
+  }
+
   // REGLA CRÍTICA DE SEGURIDAD: Validación de Suscripción en Carta Pública
   const isSubActive =
-    store.subscription_status === 'active' || store.subscription_status === 'trialing';
+    effectiveSubStatus === 'active' || effectiveSubStatus === 'trialing';
   const isNotExpired =
-    !store.current_period_end || new Date(store.current_period_end).getTime() > Date.now();
+    !effectivePeriodEnd || new Date(effectivePeriodEnd).getTime() > Date.now();
   const hasActiveSubscription = Boolean(isSubActive && isNotExpired);
 
   // Si la suscripción no está activa, NO consultamos ni exponemos productos o precios
@@ -60,21 +86,25 @@ const getMenu = cache(async (slug: string) => {
     };
   }
 
+  // Herencia de Catálogo: si es sucursal, consulta los platos del local principal
+  const storeIdToQuery = store.parent_store_id || store.id;
+
   const [
     { data: categories, error: catError },
-    { data: products, error: prodError },
+    { data: rawProducts, error: prodError },
   ] = await Promise.all([
     supabase
       .from('categories')
       .select('id, store_id, name, subtitle, order')
-      .eq('store_id', store.id)
+      .eq('store_id', storeIdToQuery)
       .order('order', { ascending: true }),
     supabase
       .from('products')
       .select(
-        'id, store_id, category_id, name, description, price, photo_url, video_url, available, badges, order'
+        'id, store_id, category_id, name, description, price, photo_url, video_url, available, badges, order, excluded_store_ids'
       )
-      .eq('store_id', store.id)
+      .eq('store_id', storeIdToQuery)
+      .not('excluded_store_ids', 'cs', `{${store.id}}`) // Excluye los desactivados para este food truck o sucursal
       .eq('available', true)
       .order('order', { ascending: true }),
   ]);
@@ -84,10 +114,15 @@ const getMenu = cache(async (slug: string) => {
     throw new Error('Database error fetching menu items');
   }
 
+  // Doble capa de seguridad: filtro en memoria por si el motor de DB no ejecutó 'cs'
+  const filteredProducts = ((rawProducts ?? []) as Product[])
+    .filter((p) => !p.excluded_store_ids || !p.excluded_store_ids.includes(store.id))
+    .map((p) => ({ ...p, price: Number(p.price) }));
+
   return {
     store: store as PublicStore,
     categories: (categories ?? []) as Category[],
-    products: ((products ?? []) as Product[]).map((p) => ({ ...p, price: Number(p.price) })),
+    products: filteredProducts,
     isSubscribed: true,
   };
 });

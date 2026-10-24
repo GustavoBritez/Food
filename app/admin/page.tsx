@@ -44,9 +44,37 @@ export default async function AdminPage({ searchParams }: Props) {
       subscription_status: 'active',
     };
 
+    const demoTruckStore: Store = {
+      id: 'demo-truck',
+      parent_store_id: 'demo-store',
+      name: 'Food Truck Plaza',
+      slug: 'demo-truck',
+      whatsapp: '5491128989237',
+      logo_url: null,
+      cover_url: 'https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?auto=format&fit=crop&w=1200&q=80',
+      created_by: 'demo-user',
+      tagline: 'Punto móvil · Burgers y Cervezas al paso',
+      accent_color: '#f97316',
+      layout: 'feed',
+      theme: 'dark',
+      bg_color: '#0a0a0a',
+      button_style: 'accent',
+      theme_config: {
+        presetId: 'urban_bar',
+        fontPair: 'modern',
+        bgPattern: 'none',
+        priceFormat: 'badge',
+        showNetPrice: false,
+        showWatermark: false,
+      },
+      plan_type: 'monthly',
+      subscription_status: 'active',
+    };
+
     return (
       <AdminClientWrapper
         initialStore={demoStore}
+        initialStores={[demoStore, demoTruckStore]}
         initialCategories={DEMO_CATEGORIES}
         initialProducts={DEMO_PRODUCTS}
         userId="demo-user"
@@ -64,28 +92,31 @@ export default async function AdminPage({ searchParams }: Props) {
     redirect('/login?next=/admin');
   }
 
-  // 1. Buscar local del dueño
-  const { data: store } = await supabase
+  // 1. Buscar todos los locales del dueño (local principal + sucursales/food trucks)
+  const { data: storesData } = await supabase
     .from('stores')
     .select('*')
     .eq('created_by', user.id)
-    .maybeSingle();
+    .order('created_at', { ascending: true });
+
+  const stores = (storesData ?? []) as Store[];
+  const mainStore = stores.find((s) => !s.parent_store_id) || stores[0] || null;
 
   let categories: Category[] = [];
   let products: Product[] = [];
 
-  // 2. Si ya tiene local, cargar sus categorías y productos
-  if (store) {
+  // 2. Si ya tiene local, cargar categorías y productos del local matriz
+  if (mainStore) {
     const [{ data: cats }, { data: prods }] = await Promise.all([
       supabase
         .from('categories')
         .select('*')
-        .eq('store_id', store.id)
+        .eq('store_id', mainStore.id)
         .order('order', { ascending: true }),
       supabase
         .from('products')
         .select('*')
-        .eq('store_id', store.id)
+        .eq('store_id', mainStore.id)
         .order('order', { ascending: true }),
     ]);
 
@@ -98,7 +129,8 @@ export default async function AdminPage({ searchParams }: Props) {
 
   return (
     <AdminClientWrapper
-      initialStore={store as Store | null}
+      initialStore={mainStore}
+      initialStores={stores}
       initialCategories={categories}
       initialProducts={products}
       userId={user.id}

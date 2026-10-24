@@ -38,6 +38,8 @@ create table if not exists public.stores (
   bg_color                text check (bg_color is null or bg_color ~ '^#[0-9a-fA-F]{6}$'),
   button_style            text not null default 'accent' check (button_style in ('accent', 'whatsapp', 'monochrome')),
   created_by              uuid references auth.users (id) on delete cascade default auth.uid(),
+  -- Relación de Sucursales / Food Trucks (NULL si es local principal, o ID del local padre si es sucursal)
+  parent_store_id         uuid references public.stores (id) on delete cascade,
   created_at              timestamptz not null default now(),
   -- Campos de suscripción y facturación Mercado Pago ($50.000 ARS/mes o $500.000 ARS/año + 30 días gratis)
   subscription_status     text not null default 'inactive'
@@ -51,6 +53,7 @@ create table if not exists public.stores (
 );
 
 -- Asegura las columnas si la tabla ya fue creada previamente
+alter table public.stores add column if not exists parent_store_id uuid references public.stores (id) on delete cascade;
 alter table public.stores add column if not exists cover_url text;
 alter table public.stores add column if not exists theme text not null default 'dark';
 alter table public.stores add column if not exists bg_color text;
@@ -72,8 +75,9 @@ alter table public.stores drop constraint if exists stores_slug_not_reserved;
 alter table public.stores add constraint stores_slug_not_reserved
   check (slug not in ('demo', 'admin', 'login', 'api', 'auth', 'p'));
 
--- Un dueño = un local
-create unique index if not exists stores_created_by_key on public.stores (created_by);
+-- Un dueño = un local principal (y hasta 2 sucursales / food trucks con parent_store_id)
+drop index if exists stores_created_by_key;
+create unique index if not exists stores_main_created_by_key on public.stores (created_by) where parent_store_id is null;
 
 -- CATEGORIES: Categorías del menú
 create table if not exists public.categories (
@@ -94,17 +98,21 @@ create table if not exists public.products (
   name         text not null check (char_length(name) between 1 and 100),
   description  text check (description is null or char_length(description) <= 500),
   price        numeric(12, 2) not null check (price >= 0),
-  photo_url    text,
-  video_url    text,
-  available    boolean not null default true,
-  "order"      int not null default 0,
-  created_at   timestamptz not null default now(),
+  photo_url           text,
+  video_url           text,
+  available           boolean not null default true,
+  -- Herencia de Catálogo: IDs de sucursales o food trucks donde este plato NO está disponible
+  excluded_store_ids  uuid[] not null default '{}',
+  "order"             int not null default 0,
+  created_at          timestamptz not null default now(),
   -- Garantiza que la categoría pertenezca a la misma tienda
   constraint products_category_fk
     foreign key (category_id, store_id)
     references public.categories (id, store_id)
     on delete cascade
 );
+
+alter table public.products add column if not exists excluded_store_ids uuid[] not null default '{}';
 
 -- MP_WEBHOOK_EVENTS: Tabla de idempotencia para webhooks de Mercado Pago
 create table if not exists public.mp_webhook_events (
@@ -117,6 +125,7 @@ create table if not exists public.mp_webhook_events (
 -- 2. ÍNDICES B-TREE PARA ALTO RENDIMIENTO (+1.000 BARES)
 -- =============================================================================
 create index if not exists stores_created_by_idx on public.stores (created_by);
+create index if not exists stores_parent_store_id_idx on public.stores (parent_store_id);
 create index if not exists stores_whatsapp_idx on public.stores (whatsapp);
 create index if not exists stores_mp_payment_id_idx on public.stores (mp_payment_id);
 create index if not exists stores_subscription_status_idx on public.stores (subscription_status);
@@ -124,6 +133,8 @@ create index if not exists categories_store_id_idx on public.categories (store_i
 create index if not exists categories_store_order_idx on public.categories (store_id, "order");
 create index if not exists products_store_idx on public.products (store_id);
 create index if not exists products_category_order_idx on public.products (category_id, "order");
+-- Índice GIN para acelerar consultas de productos filtrados por sucursal
+create index if not exists products_excluded_stores_idx on public.products using gin (excluded_store_ids);
 
 -- =============================================================================
 -- 3. FUNCIONES DE SEGURIDAD
@@ -139,9 +150,13 @@ set search_path = public
 as $$
   select exists (
     select 1 from public.stores s
+    left join public.stores p on p.id = s.parent_store_id
     where s.created_by = (select auth.uid())
-      and s.subscription_status in ('active', 'trialing')
-      and (s.current_period_end is null or s.current_period_end > now())
+      and (
+        (s.subscription_status in ('active', 'trialing') and (s.current_period_end is null or s.current_period_end > now()))
+        or
+        (p.subscription_status in ('active', 'trialing') and (p.current_period_end is null or p.current_period_end > now()))
+      )
   );
 $$;
 
@@ -159,7 +174,7 @@ as $$
   );
 $$;
 
--- Comprueba si el dueño tiene suscripción activa o período vigente
+-- Comprueba si el dueño tiene suscripción activa o período vigente (hereda de tienda padre si es sucursal)
 create or replace function public.is_store_owner_active(sid uuid)
 returns boolean
 language sql
@@ -169,10 +184,14 @@ set search_path = public
 as $$
   select exists (
     select 1 from public.stores s
+    left join public.stores p on p.id = s.parent_store_id
     where s.id = sid
       and s.created_by = (select auth.uid())
-      and s.subscription_status in ('active', 'trialing')
-      and (s.current_period_end is null or s.current_period_end > now())
+      and (
+        (s.subscription_status in ('active', 'trialing') and (s.current_period_end is null or s.current_period_end > now()))
+        or
+        (p.subscription_status in ('active', 'trialing') and (p.current_period_end is null or p.current_period_end > now()))
+      )
   );
 $$;
 
@@ -237,7 +256,8 @@ revoke select on table public.stores from anon;
 grant select (
   id, name, slug, whatsapp, logo_url, cover_url, tagline,
   accent_color, layout, theme, bg_color, button_style,
-  theme_config, subscription_status, current_period_end
+  theme_config, subscription_status, current_period_end,
+  parent_store_id
 ) on table public.stores to anon;
 
 grant select on table public.stores to authenticated, service_role;
@@ -267,11 +287,11 @@ create policy "stores: edicion del dueño" on public.stores
   using (created_by = (select auth.uid()))
   with check (created_by = (select auth.uid()));
 
--- Eliminación solo del dueño (bloqueado si ya utilizó el mes de prueba para evitar fraude y reseteos)
+-- Eliminación solo del dueño (bloqueado para la tienda principal si ya usó trial; permitido libremente para sucursales)
 drop policy if exists "stores: baja del dueño" on public.stores;
 create policy "stores: baja del dueño" on public.stores
   for delete to authenticated
-  using (created_by = (select auth.uid()) and trial_end is null);
+  using (created_by = (select auth.uid()) and (trial_end is null or parent_store_id is not null));
 
 -- CATEGORIES:
 -- Lectura pública
@@ -383,6 +403,31 @@ on conflict (id) do update
       layout = excluded.layout,
       subscription_status = excluded.subscription_status,
       current_period_end = excluded.current_period_end;
+
+-- Sucursal 1 (Food Truck de Prueba) que hereda el catálogo del Bar de Prueba
+insert into public.stores (
+  id, name, slug, whatsapp, parent_store_id, logo_url, cover_url, created_by, tagline, accent_color, layout,
+  subscription_status, current_period_end
+)
+values (
+  '00000000-0000-4000-8000-000000000002',
+  'Bar de Prueba - Food Truck',
+  'bar-de-prueba-truck',
+  '5491123456789',
+  '00000000-0000-4000-8000-000000000001',
+  null,
+  'https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?auto=format&fit=crop&w=1200&q=80',
+  null,
+  'Punto móvil · Burgers y Cervezas al paso',
+  '#f97316',
+  'feed',
+  'active',
+  now() + interval '1 year'
+)
+on conflict (id) do update
+  set name = excluded.name,
+      slug = excluded.slug,
+      parent_store_id = excluded.parent_store_id;
 
 -- Categorías de prueba
 insert into public.categories (id, store_id, name, "order") values

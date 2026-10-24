@@ -16,11 +16,13 @@ import {
   Settings,
   Smartphone,
   Trash2,
+  Truck,
   UtensilsCrossed,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { PublicMenu } from '@/components/menu/PublicMenu';
 import { WhatsAppIcon } from '@/components/WhatsAppIcon';
+import { BranchModal } from './BranchModal';
 import { CategoryModal } from './CategoryModal';
 import { ProductModal } from './ProductModal';
 import { QrModal } from './QrModal';
@@ -33,6 +35,7 @@ import { formatPrice, menuUrl } from '@/lib/utils';
 
 type Props = {
   initialStore: Store;
+  initialStores?: Store[];
   initialCategories: Category[];
   initialProducts: Product[];
   userId: string;
@@ -40,16 +43,31 @@ type Props = {
 
 export function AdminDashboard({
   initialStore,
+  initialStores,
   initialCategories,
   initialProducts,
   userId,
 }: Props) {
-  const [store, setStore] = useState<Store>(initialStore);
+  // Lista de locales del dueño (local principal + sucursales/food trucks)
+  const [stores, setStores] = useState<Store[]>(
+    initialStores && initialStores.length > 0 ? initialStores : [initialStore]
+  );
+  const [selectedStoreId, setSelectedStoreId] = useState<string>(initialStore.id);
+
+  // Local principal (matriz donde se administran platos y categorías)
+  const mainStore = stores.find((s) => !s.parent_store_id) || stores[0] || initialStore;
+  // Punto de venta seleccionado actualmente
+  const activeStore = stores.find((s) => s.id === selectedStoreId) || mainStore;
+  const isBranch = activeStore.id !== mainStore.id;
+  const branches = stores.filter((s) => s.id !== mainStore.id);
+  const MAX_INCLUDED_BRANCHES = 2;
+
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [products, setProducts] = useState<Product[]>(initialProducts);
 
   // Modales
   const [qrOpen, setQrOpen] = useState(false);
+  const [branchModalOpen, setBranchModalOpen] = useState(false);
   const [catModalOpen, setCatModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [prodModalOpen, setProdModalOpen] = useState(false);
@@ -60,7 +78,7 @@ export function AdminDashboard({
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
   const [previewDraft, setPreviewDraft] = useState<Partial<Store>>({});
 
-  const previewStore = { ...store, ...previewDraft };
+  const previewStore = { ...activeStore, ...previewDraft };
 
   // Toasts de copiado
   const [copiedWp, setCopiedWp] = useState(false);
@@ -81,16 +99,68 @@ export function AdminDashboard({
     }
   }
 
-  // --- Manejo de Store ---
+  // --- Manejo de Store y Sucursales ---
   function handleStoreUpdated(updated: Store, previousSlug?: string) {
-    setStore(updated);
+    setStores((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
     setPreviewDraft({});
     triggerRevalidate(previousSlug);
   }
 
-  // --- Manejo de Categorías ---
+  function handleBranchCreated(newBranch: Store) {
+    setStores((prev) => [...prev, newBranch]);
+    setSelectedStoreId(newBranch.id);
+    triggerRevalidate();
+  }
+
+  async function handleDeleteBranch(branchId: string) {
+    if (mainStore.id !== 'demo-store' && userId !== 'demo-user') {
+      const { error } = await supabase.from('stores').delete().eq('id', branchId);
+      if (error) {
+        console.error('Error eliminando sucursal:', error);
+        alert('No se pudo eliminar la sucursal.');
+        return;
+      }
+    }
+    setStores((prev) => prev.filter((s) => s.id !== branchId));
+    setSelectedStoreId(mainStore.id);
+    triggerRevalidate();
+  }
+
+  // Activa u oculta un plato exclusivamente en la sucursal / food truck seleccionado
+  async function handleToggleBranchVisibility(prod: Product, branchId: string) {
+    const currentExcluded = prod.excluded_store_ids || [];
+    const isExcluded = currentExcluded.includes(branchId);
+    const nextExcluded = isExcluded
+      ? currentExcluded.filter((id) => id !== branchId)
+      : [...currentExcluded, branchId];
+
+    // Actualización optimista inmediata
+    setProducts((prev) =>
+      prev.map((p) => (p.id === prod.id ? { ...p, excluded_store_ids: nextExcluded } : p))
+    );
+
+    if (mainStore.id !== 'demo-store' && userId !== 'demo-user') {
+      const { error } = await supabase
+        .from('products')
+        .update({ excluded_store_ids: nextExcluded })
+        .eq('id', prod.id);
+
+      if (error) {
+        console.error('Error actualizando visibilidad por sucursal:', error);
+        setProducts((prev) =>
+          prev.map((p) => (p.id === prod.id ? { ...p, excluded_store_ids: currentExcluded } : p))
+        );
+        alert('No se pudo actualizar la visibilidad en este punto.');
+        return;
+      }
+    }
+
+    triggerRevalidate();
+  }
+
+  // --- Manejo de Categorías (se crean en el local principal) ---
   async function handleSaveCategory(data: { id?: string; name: string; subtitle?: string | null; order: number }) {
-    if (store.id === 'demo-store' || userId === 'demo-user') {
+    if (mainStore.id === 'demo-store' || userId === 'demo-user') {
       if (data.id) {
         setCategories((prev) =>
           prev
@@ -100,7 +170,7 @@ export function AdminDashboard({
       } else {
         const created: Category = {
           id: `cat-${Date.now()}`,
-          store_id: store.id,
+          store_id: mainStore.id,
           name: data.name,
           subtitle: data.subtitle ?? null,
           order: data.order,
@@ -127,7 +197,7 @@ export function AdminDashboard({
       const { data: created, error } = await supabase
         .from('categories')
         .insert({
-          store_id: store.id,
+          store_id: mainStore.id,
           name: data.name,
           subtitle: data.subtitle ?? null,
           order: data.order,
@@ -171,7 +241,7 @@ export function AdminDashboard({
 
   // --- Manejo de Productos ---
   async function handleSaveProduct(data: Partial<Product> & { id?: string }) {
-    if (store.id === 'demo-store' || userId === 'demo-user') {
+    if (mainStore.id === 'demo-store' || userId === 'demo-user') {
       if (data.id) {
         setProducts((prev) =>
           prev
@@ -181,7 +251,7 @@ export function AdminDashboard({
       } else {
         const created: Product = {
           id: `prod-${Date.now()}`,
-          store_id: store.id,
+          store_id: mainStore.id,
           category_id: data.category_id!,
           name: data.name!,
           description: data.description ?? null,
@@ -190,6 +260,7 @@ export function AdminDashboard({
           video_url: data.video_url ?? null,
           available: data.available ?? true,
           badges: data.badges ?? [],
+          excluded_store_ids: [],
           order: data.order ?? products.length,
         };
         setProducts((prev) => [...prev, created].sort((a, b) => a.order - b.order));
@@ -283,7 +354,7 @@ export function AdminDashboard({
 
   // --- Copiar Enlaces ---
   async function copyWhatsappLink() {
-    const wpUrl = `https://wa.me/${store.whatsapp}`;
+    const wpUrl = `https://wa.me/${activeStore.whatsapp}`;
     try {
       await navigator.clipboard.writeText(wpUrl);
       setCopiedWp(true);
@@ -294,7 +365,7 @@ export function AdminDashboard({
   }
 
   async function copyMenuLink() {
-    const url = menuUrl(store.slug);
+    const url = menuUrl(activeStore.slug);
     try {
       await navigator.clipboard.writeText(url);
       setCopiedLink(true);
@@ -313,14 +384,14 @@ export function AdminDashboard({
             <Logo />
             <span className="hidden text-subtle sm:inline">/</span>
             <div className="hidden min-w-0 sm:flex sm:items-center sm:gap-2">
-              <span className="truncate text-[15px] font-semibold">{store.name}</span>
+              <span className="truncate text-[15px] font-semibold">{activeStore.name}</span>
               <a
-                href={`/p/${store.slug}`}
+                href={`/p/${activeStore.slug}`}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 rounded-full bg-canvas px-2.5 py-0.5 text-[12px] font-medium text-muted transition hover:bg-black/5 hover:text-ink"
               >
-                /p/{store.slug} <ExternalLink className="h-3 w-3" />
+                /p/{activeStore.slug} <ExternalLink className="h-3 w-3" />
               </a>
             </div>
           </div>
@@ -380,10 +451,10 @@ export function AdminDashboard({
         </div>
       </header>
 
-      {/* Barra de Subnavegación del Admin */}
+      {/* Barra de Subnavegación del Admin + Selector de Sucursal */}
       <div className="border-b border-black/[0.06] bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6">
-          <nav className="flex gap-1 py-2">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6">
+          <nav className="flex gap-1 py-1">
             <button
               type="button"
               onClick={() => setActiveTab('menu')}
@@ -400,25 +471,64 @@ export function AdminDashboard({
                 activeTab === 'settings' ? 'bg-ink text-white' : 'text-muted hover:bg-canvas hover:text-ink'
               }`}
             >
-              <Settings className="h-4 w-4" /> Datos del Local
+              <Settings className="h-4 w-4" /> {isBranch ? `Datos de ${activeStore.name}` : 'Datos del Local'}
             </button>
           </nav>
 
-          <button
-            type="button"
-            onClick={copyMenuLink}
-            className="hidden text-[13px] text-muted hover:text-ink sm:inline-flex sm:items-center sm:gap-1.5"
-          >
-            {copiedLink ? <Check className="h-3.5 w-3.5 text-whatsapp-dark" /> : <Copy className="h-3.5 w-3.5" />}
-            {copiedLink ? 'Link copiado' : 'Copiar link del menú'}
-          </button>
+          {/* Selector de Sucursal / Food Truck */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-xl border border-black/10 bg-canvas/80 px-3 py-1 text-[13px] shadow-sm">
+              <span className="text-[11.5px] font-medium text-muted hidden md:inline">
+                🎛️ Punto de venta:
+              </span>
+              <select
+                value={selectedStoreId}
+                onChange={(e) => {
+                  if (e.target.value === '__NEW__') {
+                    if (branches.length >= MAX_INCLUDED_BRANCHES) {
+                      alert(
+                        `Ya utilizaste las ${MAX_INCLUDED_BRANCHES} sucursales / food trucks incluidas en tu suscripción de $50.000 ARS/mes.\n\nPara sumar sucursales adicionales ($15.000 ARS/mes c/u), contactanos por WhatsApp.`
+                      );
+                      return;
+                    }
+                    setBranchModalOpen(true);
+                    return;
+                  }
+                  setSelectedStoreId(e.target.value);
+                }}
+                className="bg-transparent font-semibold text-ink outline-none cursor-pointer text-[13px] max-w-[220px] sm:max-w-[280px] truncate"
+              >
+                <option value={mainStore.id}>🏪 {mainStore.name} (Local Principal)</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    🚚 {b.name} (Food Truck / Sucursal)
+                  </option>
+                ))}
+                <option value="__NEW__">
+                  {branches.length >= MAX_INCLUDED_BRANCHES
+                    ? `+ Agregar sucursal adicional ($15.000/mes)`
+                    : `+ Nueva Sucursal o Food Truck (${branches.length}/${MAX_INCLUDED_BRANCHES} incluidos)`}
+                </option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={copyMenuLink}
+              className="hidden text-[13px] text-muted hover:text-ink sm:inline-flex sm:items-center sm:gap-1.5 ml-2"
+              title={`Copiar link de ${activeStore.name}`}
+            >
+              {copiedLink ? <Check className="h-3.5 w-3.5 text-whatsapp-dark" /> : <Copy className="h-3.5 w-3.5" />}
+              {copiedLink ? 'Link copiado' : 'Copiar link'}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Layout Principal: Dos columnas en Desktop (Gestión + Live Preview) */}
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
-        {/* Banner de Estado de Suscripción / Planes Mercado Pago */}
-        <SubscriptionBanner store={store} />
+        {/* Banner de Estado de Suscripción / Planes Mercado Pago (se basa en la cuenta principal) */}
+        <SubscriptionBanner store={mainStore} />
 
         <div className="grid gap-8 lg:grid-cols-12">
           {/* Columna Izquierda: CRUD / Configuración */}
@@ -429,19 +539,73 @@ export function AdminDashboard({
           >
             {activeTab === 'settings' ? (
               <StoreSettings
-                store={store}
+                store={activeStore}
                 userId={userId}
                 onUpdate={handleStoreUpdated}
                 onPreviewDraft={setPreviewDraft}
+                onDeleteBranch={handleDeleteBranch}
               />
             ) : (
               <>
+                {/* Banner contextual cuando se administra una Sucursal o Food Truck */}
+                {isBranch && (
+                  <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.08] p-4 text-ink">
+                    <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-amber-500 text-white shadow-sm text-lg">
+                          🚚
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-[15px] font-semibold text-ink">
+                              {activeStore.name}
+                            </h3>
+                            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
+                              Food Truck / Sucursal
+                            </span>
+                          </div>
+                          <p className="text-[12px] text-muted mt-0.5 leading-relaxed">
+                            Hereda platos y precios de <strong>{mainStore.name}</strong>. Tocá el switch de cada plato para activarlo u ocultarlo exclusivamente en este punto.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <a
+                          href={`/p/${activeStore.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-secondary h-8 px-3 text-[12px]"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" /> Ver carta
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => setQrOpen(true)}
+                          className="btn-secondary h-8 px-3 text-[12px]"
+                        >
+                          <QrCode className="h-3.5 w-3.5" /> QR punto
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Cabecera del Menú */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-xl font-semibold tracking-tight">Tu Menú Digital</h2>
+                    <h2 className="text-xl font-semibold tracking-tight">
+                      {isBranch ? `Carta de ${activeStore.name}` : 'Tu Menú Digital'}
+                    </h2>
                     <p className="text-[13px] text-muted">
-                      {categories.length} categoría(s) · {products.length} producto(s)
+                      {categories.length} categoría(s) · {products.length} producto(s) en catálogo
+                      {isBranch && (
+                        <span>
+                          {' '}·{' '}
+                          <strong className="text-emerald-700">
+                            {products.filter((p) => !p.excluded_store_ids?.includes(activeStore.id)).length} visibles en este punto
+                          </strong>
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -449,9 +613,9 @@ export function AdminDashboard({
                       type="button"
                       onClick={() => {
                         const isSubscribed =
-                          store.id === 'demo-store' ||
-                          store.subscription_status === 'active' ||
-                          store.subscription_status === 'trialing';
+                          mainStore.id === 'demo-store' ||
+                          mainStore.subscription_status === 'active' ||
+                          mainStore.subscription_status === 'trialing';
                         if (!isSubscribed) {
                           alert('Debes activar tu mes gratis o suscribirte con Mercado Pago para crear categorías.');
                           return;
@@ -468,9 +632,9 @@ export function AdminDashboard({
                       disabled={categories.length === 0}
                       onClick={() => {
                         const isSubscribed =
-                          store.id === 'demo-store' ||
-                          store.subscription_status === 'active' ||
-                          store.subscription_status === 'trialing';
+                          mainStore.id === 'demo-store' ||
+                          mainStore.subscription_status === 'active' ||
+                          mainStore.subscription_status === 'trialing';
                         if (!isSubscribed) {
                           alert('Debes activar tu mes gratis o suscribirte con Mercado Pago para agregar platos.');
                           return;
@@ -572,108 +736,158 @@ export function AdminDashboard({
                             </div>
                           ) : (
                             <div className="divide-y divide-black/[0.06]">
-                              {categoryProducts.map((prod) => (
-                                <div
-                                  key={prod.id}
-                                  className={`flex items-center gap-3.5 p-4 transition ${
-                                    !prod.available ? 'opacity-60' : ''
-                                  }`}
-                                >
-                                  {/* Foto miniatura */}
-                                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-black/5 bg-canvas">
-                                    {prod.photo_url ? (
-                                      <Image
-                                        src={prod.photo_url}
-                                        alt={prod.name}
-                                        fill
-                                        sizes="56px"
-                                        className="object-cover"
-                                      />
-                                    ) : (
-                                      <div className="grid h-full w-full place-items-center text-[10px] text-subtle">
-                                        Sin foto
-                                      </div>
-                                    )}
-                                  </div>
+                              {categoryProducts.map((prod) => {
+                                const isExcludedInBranch =
+                                  isBranch && (prod.excluded_store_ids || []).includes(activeStore.id);
 
-                                  {/* Datos del producto */}
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-baseline gap-2 flex-wrap">
-                                      <h4 className="truncate text-[15px] font-medium leading-snug">
-                                        {prod.name}
-                                      </h4>
-                                      {prod.badges && prod.badges.length > 0 && (
-                                        <div className="flex items-center gap-1">
-                                          {prod.badges.map((b) => (
-                                            <span
-                                              key={b}
-                                              className="rounded-md bg-black/[0.05] px-1.5 py-0.5 text-[10px] text-muted font-medium"
-                                            >
-                                              {b}
-                                            </span>
-                                          ))}
+                                return (
+                                  <div
+                                    key={prod.id}
+                                    className={`flex items-center gap-3.5 p-4 transition ${
+                                      !prod.available || isExcludedInBranch ? 'opacity-60 bg-black/[0.01]' : ''
+                                    }`}
+                                  >
+                                    {/* Foto miniatura */}
+                                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-black/5 bg-canvas">
+                                      {prod.photo_url ? (
+                                        <Image
+                                          src={prod.photo_url}
+                                          alt={prod.name}
+                                          fill
+                                          sizes="56px"
+                                          className="object-cover"
+                                        />
+                                      ) : (
+                                        <div className="grid h-full w-full place-items-center text-[10px] text-subtle">
+                                          Sin foto
                                         </div>
                                       )}
-                                      {!prod.available && (
-                                        <span className="rounded bg-black/10 px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-                                          Agotado
-                                        </span>
-                                      )}
                                     </div>
-                                    {prod.description && (
-                                      <p className="line-clamp-1 text-[13px] text-muted">
-                                        {prod.description}
-                                      </p>
-                                    )}
-                                    <p className="mt-0.5 text-[14px] font-semibold tabular-nums text-ink">
-                                      {formatPrice(prod.price)}
-                                    </p>
-                                  </div>
 
-                                  {/* Acciones */}
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleAvailable(prod)}
-                                      className={`icon-btn h-8 w-8 ${
-                                        prod.available
-                                          ? 'text-whatsapp-dark'
-                                          : 'text-subtle hover:text-ink'
-                                      }`}
-                                      title={
-                                        prod.available
-                                          ? 'Marcar como agotado'
-                                          : 'Marcar como disponible'
-                                      }
-                                    >
-                                      {prod.available ? (
-                                        <Eye className="h-4 w-4" />
-                                      ) : (
-                                        <EyeOff className="h-4 w-4" />
+                                    {/* Datos del producto */}
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-baseline gap-2 flex-wrap">
+                                        <h4 className="truncate text-[15px] font-medium leading-snug">
+                                          {prod.name}
+                                        </h4>
+                                        {prod.badges && prod.badges.length > 0 && (
+                                          <div className="flex items-center gap-1">
+                                            {prod.badges.map((b) => (
+                                              <span
+                                                key={b}
+                                                className="rounded-md bg-black/[0.05] px-1.5 py-0.5 text-[10px] text-muted font-medium"
+                                              >
+                                                {b}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {!prod.available && (
+                                          <span className="rounded bg-black/10 px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+                                            Agotado
+                                          </span>
+                                        )}
+                                        {isBranch && isExcludedInBranch && (
+                                          <span className="rounded bg-zinc-200/80 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700">
+                                            No ofrecido en este punto
+                                          </span>
+                                        )}
+                                        {!isBranch &&
+                                          prod.excluded_store_ids &&
+                                          prod.excluded_store_ids.length > 0 && (
+                                            <span
+                                              className="rounded bg-amber-50 border border-amber-200/70 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
+                                              title={`Oculto en ${prod.excluded_store_ids.length} sucursal(es)`}
+                                            >
+                                              Oculto en {prod.excluded_store_ids.length} suc.
+                                            </span>
+                                          )}
+                                      </div>
+                                      {prod.description && (
+                                        <p className="line-clamp-1 text-[13px] text-muted">
+                                          {prod.description}
+                                        </p>
                                       )}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setEditingProduct(prod);
-                                        setProdModalOpen(true);
-                                      }}
-                                      className="icon-btn h-8 w-8 hover:text-ink"
-                                      title="Editar producto"
-                                    >
-                                      <Pencil className="h-3.5 w-3.5" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteProduct(prod.id)}
-                                      className="icon-btn h-8 w-8 hover:text-red-600"
-                                      title="Eliminar producto"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </button>
+                                      <p className="mt-0.5 text-[14px] font-semibold tabular-nums text-ink">
+                                        {formatPrice(prod.price)}
+                                      </p>
+                                    </div>
+
+                                    {/* Acciones */}
+                                    <div className="flex items-center gap-1.5">
+                                      {isBranch ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleBranchVisibility(prod, activeStore.id)}
+                                          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                                            !isExcludedInBranch
+                                              ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                                              : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200 border border-zinc-200'
+                                          }`}
+                                          title={
+                                            !isExcludedInBranch
+                                              ? 'Hacer clic para ocultar en este punto de venta'
+                                              : 'Hacer clic para activar en este punto de venta'
+                                          }
+                                        >
+                                          {!isExcludedInBranch ? (
+                                            <>
+                                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                              <span>Visible aquí</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
+                                              <span>Oculto aquí</span>
+                                            </>
+                                          )}
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleAvailable(prod)}
+                                          className={`icon-btn h-8 w-8 ${
+                                            prod.available
+                                              ? 'text-whatsapp-dark'
+                                              : 'text-subtle hover:text-ink'
+                                          }`}
+                                          title={
+                                            prod.available
+                                              ? 'Marcar como agotado en toda la cadena'
+                                              : 'Marcar como disponible'
+                                          }
+                                        >
+                                          {prod.available ? (
+                                            <Eye className="h-4 w-4" />
+                                          ) : (
+                                            <EyeOff className="h-4 w-4" />
+                                          )}
+                                        </button>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingProduct(prod);
+                                          setProdModalOpen(true);
+                                        }}
+                                        className="icon-btn h-8 w-8 hover:text-ink"
+                                        title="Editar producto (se actualiza en todas las sucursales)"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteProduct(prod.id)}
+                                        className="icon-btn h-8 w-8 hover:text-red-600"
+                                        title="Eliminar producto del catálogo"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                         </div>
@@ -697,7 +911,7 @@ export function AdminDashboard({
                   Vista previa en vivo
                 </span>
                 <a
-                  href={`/p/${store.slug}`}
+                  href={`/p/${activeStore.slug}`}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1 text-[12px] font-medium text-muted hover:text-ink"
@@ -716,7 +930,13 @@ export function AdminDashboard({
                   <PublicMenu
                     store={previewStore}
                     categories={categories}
-                    products={products}
+                    products={
+                      isBranch
+                        ? products.filter(
+                            (p) => !(p.excluded_store_ids || []).includes(activeStore.id)
+                          )
+                        : products
+                    }
                     preview={true}
                   />
                 </div>
@@ -737,7 +957,15 @@ export function AdminDashboard({
       </main>
 
       {/* Modales */}
-      <QrModal open={qrOpen} onClose={() => setQrOpen(false)} store={store} />
+      <QrModal open={qrOpen} onClose={() => setQrOpen(false)} store={activeStore} />
+
+      <BranchModal
+        open={branchModalOpen}
+        onClose={() => setBranchModalOpen(false)}
+        mainStore={mainStore}
+        userId={userId}
+        onCreated={handleBranchCreated}
+      />
 
       <CategoryModal
         open={catModalOpen}
@@ -752,7 +980,7 @@ export function AdminDashboard({
         onClose={() => setProdModalOpen(false)}
         product={editingProduct}
         categories={categories}
-        storeId={store.id}
+        storeId={mainStore.id}
         userId={userId}
         onSave={handleSaveProduct}
         nextOrder={products.length}
