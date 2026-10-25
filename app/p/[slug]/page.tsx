@@ -95,13 +95,13 @@ const getMenu = cache(async (slug: string) => {
   ] = await Promise.all([
     supabase
       .from('categories')
-      .select('id, store_id, name, subtitle, order')
+      .select('id, store_id, name, subtitle, order, display_mode, price_columns')
       .eq('store_id', storeIdToQuery)
       .order('order', { ascending: true }),
     supabase
       .from('products')
       .select(
-        'id, store_id, category_id, name, description, price, photo_url, video_url, available, badges, order, excluded_store_ids'
+        'id, store_id, category_id, name, description, price, photo_url, video_url, available, badges, badge_label, price_variants, order, excluded_store_ids'
       )
       .eq('store_id', storeIdToQuery)
       .not('excluded_store_ids', 'cs', `{${store.id}}`) // Excluye los desactivados para este food truck o sucursal

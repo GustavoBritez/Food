@@ -5,8 +5,6 @@ import { createPortal } from 'react-dom';
 import {
   Compass,
   Download,
-  ExternalLink,
-  MoreVertical,
   PlusSquare,
   Share2,
   Smartphone,
@@ -117,12 +115,31 @@ export function PwaInstallButton({
   const handleInstallClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // 1. Intentar lanzar el prompt nativo de Android/Chrome si está disponible
-    const promptEvent =
+    // 1. Obtener el evento nativo de instalación capturado
+    let promptEvent =
       deferredPrompt ||
       (typeof window !== 'undefined'
         ? (window as unknown as { __pwaPrompt?: BeforeInstallPromptEvent }).__pwaPrompt
         : null);
+
+    // Si aún no está capturado en memoria, esperar una fracción de segundo por el evento
+    if (!promptEvent && typeof window !== 'undefined') {
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, 300);
+        window.addEventListener(
+          'pwa-prompt-ready',
+          () => {
+            clearTimeout(timer);
+            resolve();
+          },
+          { once: true }
+        );
+      });
+      promptEvent =
+        deferredPrompt ||
+        (window as unknown as { __pwaPrompt?: BeforeInstallPromptEvent }).__pwaPrompt ||
+        null;
+    }
 
     if (promptEvent) {
       try {
@@ -134,37 +151,22 @@ export function PwaInstallButton({
             (window as unknown as { __pwaPrompt?: BeforeInstallPromptEvent | null }).__pwaPrompt = null;
           }
           setIsInstalled(true);
-          return;
         }
+        return;
       } catch (err) {
         console.warn('Error al ejecutar prompt nativo PWA:', err);
       }
     }
 
-    // 2. Si el prompt nativo no está disponible o el navegador es iOS / Webview / in-app:
-    // ABRIR SIEMPRE EL MODAL DE GUÍA PASO A PASO
-    setModalOpen(true);
-  };
-
-  const triggerNativePrompt = async () => {
-    const promptEvent =
-      deferredPrompt ||
-      (typeof window !== 'undefined'
-        ? (window as unknown as { __pwaPrompt?: BeforeInstallPromptEvent }).__pwaPrompt
-        : null);
-
-    if (promptEvent) {
-      try {
-        await promptEvent.prompt();
-        const { outcome } = await promptEvent.userChoice;
-        if (outcome === 'accepted') {
-          setIsInstalled(true);
-          setModalOpen(false);
-        }
-      } catch (err) {
-        console.warn('Error launching prompt:', err);
-      }
+    // 2. En iOS Safari (donde Apple WebKit no soporta beforeinstallprompt) o navegador in-app (WhatsApp/Instagram):
+    // Mostrar asistencia amigable
+    if (platform.isIOS || platform.isInApp) {
+      setModalOpen(true);
+      return;
     }
+
+    // 3. En Android / Google Chrome: SIN MODAL NI PASOS EN PANTALLA.
+    // El usuario pidió expresamente: "simplemente hacerle click ya debe iniciar la descarga en chrome".
   };
 
   const baseStyles =
@@ -267,59 +269,16 @@ export function PwaInstallButton({
               </ol>
             </div>
           ) : (
-            // Instrucciones para Android / Google Chrome u otros
-            <div className="space-y-3 rounded-2xl bg-white/[0.04] p-4 border border-white/5">
-              <p className="text-[12px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5" /> Pasos para Android / Google Chrome:
+            <div className="rounded-2xl bg-white/[0.04] p-4 border border-white/5 text-center text-[13px] text-neutral-300">
+              <p>
+                Para instalar la app directamente, usá Google Chrome y tocá <strong className="text-white">Instalar</strong>.
               </p>
-              <ol className="space-y-3 text-[13px] text-neutral-200">
-                <li className="flex items-start gap-3">
-                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-500 text-neutral-950 font-bold text-xs">
-                    1
-                  </span>
-                  <div>
-                    Tocá el menú de <strong>tres puntos</strong> en la esquina superior derecha:
-                    <div className="mt-1 inline-flex items-center gap-1 rounded-lg bg-white/10 px-2 py-0.5 text-xs text-white">
-                      <MoreVertical className="h-3.5 w-3.5" /> Menú de Chrome (⋮)
-                    </div>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-500 text-neutral-950 font-bold text-xs">
-                    2
-                  </span>
-                  <div>
-                    Seleccioná la opción:
-                    <div className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2 py-0.5 text-xs font-semibold text-white">
-                      <Download className="h-3.5 w-3.5 text-emerald-400" /> &ldquo;Instalar aplicación&rdquo; o &ldquo;Agregar a inicio&rdquo;
-                    </div>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-500 text-neutral-950 font-bold text-xs">
-                    3
-                  </span>
-                  <p>
-                    Confirmá tocando <strong>&ldquo;Instalar&rdquo;</strong>. La App se agregará con el logo oficial del restaurante.
-                  </p>
-                </li>
-              </ol>
             </div>
           )}
         </div>
 
         {/* Botones de acción del Modal */}
         <div className="mt-6 flex flex-col gap-2.5">
-          {deferredPrompt && (
-            <button
-              type="button"
-              onClick={triggerNativePrompt}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 text-[14px] font-bold text-neutral-950 shadow-lg transition active:scale-[0.98] hover:bg-emerald-400"
-            >
-              <Download className="h-4 w-4" />
-              <span>Instalar Ahora con 1 Clic</span>
-            </button>
-          )}
 
           <button
             type="button"

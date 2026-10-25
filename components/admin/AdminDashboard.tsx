@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  FileText,
   LogOut,
   Pencil,
   Plus,
@@ -30,7 +31,7 @@ import { StoreSettings } from './StoreSettings';
 import { SubscriptionBanner } from './SubscriptionBanner';
 import { removeImageByUrl } from '@/lib/storage';
 import { createClient } from '@/lib/supabase/client';
-import type { Category, Product, Store } from '@/lib/types';
+import type { Category, CategoryDisplayMode, Product, Store } from '@/lib/types';
 import { formatPrice, menuUrl } from '@/lib/utils';
 
 type Props = {
@@ -172,12 +173,30 @@ export function AdminDashboard({
   }
 
   // --- Manejo de Categorías (se crean en el local principal) ---
-  async function handleSaveCategory(data: { id?: string; name: string; subtitle?: string | null; order: number }) {
+  async function handleSaveCategory(data: {
+    id?: string;
+    name: string;
+    subtitle?: string | null;
+    order: number;
+    display_mode?: CategoryDisplayMode;
+    price_columns?: string[];
+  }) {
     if (mainStore.id === 'demo-store' || userId === 'demo-user') {
       if (data.id) {
         setCategories((prev) =>
           prev
-            .map((c) => (c.id === data.id ? { ...c, name: data.name, subtitle: data.subtitle ?? null, order: data.order } : c))
+            .map((c) =>
+              c.id === data.id
+                ? {
+                    ...c,
+                    name: data.name,
+                    subtitle: data.subtitle ?? null,
+                    order: data.order,
+                    display_mode: data.display_mode ?? 'standard',
+                    price_columns: data.price_columns ?? [],
+                  }
+                : c
+            )
             .sort((a, b) => a.order - b.order)
         );
       } else {
@@ -187,6 +206,8 @@ export function AdminDashboard({
           name: data.name,
           subtitle: data.subtitle ?? null,
           order: data.order,
+          display_mode: data.display_mode ?? 'standard',
+          price_columns: data.price_columns ?? [],
         };
         setCategories((prev) => [...prev, created].sort((a, b) => a.order - b.order));
       }
@@ -196,7 +217,13 @@ export function AdminDashboard({
     if (data.id) {
       const { data: updated, error } = await supabase
         .from('categories')
-        .update({ name: data.name, subtitle: data.subtitle ?? null, order: data.order })
+        .update({
+          name: data.name,
+          subtitle: data.subtitle ?? null,
+          order: data.order,
+          display_mode: data.display_mode ?? 'standard',
+          price_columns: data.price_columns ?? [],
+        })
         .eq('id', data.id)
         .select()
         .single();
@@ -214,6 +241,8 @@ export function AdminDashboard({
           name: data.name,
           subtitle: data.subtitle ?? null,
           order: data.order,
+          display_mode: data.display_mode ?? 'standard',
+          price_columns: data.price_columns ?? [],
         })
         .select()
         .single();
@@ -419,6 +448,18 @@ export function AdminDashboard({
               <QrCode className="h-4 w-4" />
               <span>Generar QR</span>
             </button>
+
+            {/* Botón Ver PDF de la sucursal/foodtruck seleccionada */}
+            <a
+              href={`/p/${activeStore.slug}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary h-9 px-3 text-[13.5px]"
+              title={`Ver y descargar PDF / folleto imprimible de ${activeStore.name}`}
+            >
+              <FileText className="h-4 w-4" />
+              <span>Ver PDF</span>
+            </a>
 
             {/* Botón Copiar link de WhatsApp */}
             <button

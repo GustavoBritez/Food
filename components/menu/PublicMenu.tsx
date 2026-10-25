@@ -30,9 +30,9 @@ const LAYOUT_STRATEGIES = {
 
 /** Acciones de pedido compartidas por las vistas */
 export type MenuActions = {
-  qtyOf: (id: string) => number;
-  orderAtTable: (p: Product) => void;
-  orderOneByWhatsApp: (p: Product) => void;
+  qtyOf: (id: string, variantLabel?: string) => number;
+  orderAtTable: (p: Product, variant?: { label: string; price: number }) => void;
+  orderOneByWhatsApp: (p: Product, variant?: { label: string; price: number }) => void;
   openCart: () => void;
   count: number;
   total: number;
@@ -98,6 +98,14 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
   const lines = useMemo<OrderLine[]>(
     () =>
       Object.entries(items).flatMap(([id, qty]) => {
+        if (id.includes('__var__')) {
+          const [baseId, varLabel] = id.split('__var__');
+          const p = byId.get(baseId);
+          if (!p || !p.available) return [];
+          const v = (p.price_variants ?? []).find((v) => v.label === varLabel);
+          const price = v ? Number(v.price) : Number(p.price);
+          return [{ id, name: `${p.name} (${varLabel})`, price, qty }];
+        }
         const p = byId.get(id);
         return p && p.available ? [{ id, name: p.name, price: Number(p.price), qty }] : [];
       }),
@@ -106,19 +114,22 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
   const total = orderTotal(lines);
   const count = orderCount(lines);
 
-  // FLUJO 1 · en el local: se acumula y se muestra al mozo
+  // FLUJO 1 · en el local: se acumula y se muestra al mozo (con soporte de variantes)
   const orderAtTable = useCallback(
-    (p: Product) => {
-      add(p.id);
+    (p: Product, variant?: { label: string; price: number }) => {
+      const key = variant ? `${p.id}__var__${variant.label}` : p.id;
+      add(key);
       setWaiterOpen(true);
     },
     [add]
   );
 
-  // FLUJO 2 · fuera del local: un producto directo a WhatsApp
+  // FLUJO 2 · fuera del local: un producto directo a WhatsApp (con soporte de variantes)
   const orderOneByWhatsApp = useCallback(
-    (p: Product) => {
-      const msg = buildOrderMessage(store.name, [{ id: p.id, name: p.name, price: Number(p.price), qty: 1 }]);
+    (p: Product, variant?: { label: string; price: number }) => {
+      const name = variant ? `${p.name} (${variant.label})` : p.name;
+      const price = variant ? Number(variant.price) : Number(p.price);
+      const msg = buildOrderMessage(store.name, [{ id: p.id, name, price, qty: 1 }]);
       openExternal(whatsappUrl(store.whatsapp, msg));
     },
     [store.name, store.whatsapp]
@@ -130,7 +141,10 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
   }
 
   const actions: MenuActions = {
-    qtyOf: (id) => items[id] ?? 0,
+    qtyOf: (id, variantLabel) => {
+      if (variantLabel) return items[`${id}__var__${variantLabel}`] ?? 0;
+      return items[id] ?? 0;
+    },
     orderAtTable,
     orderOneByWhatsApp,
     openCart: () => setCartOpen(true),

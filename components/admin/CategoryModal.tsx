@@ -3,13 +3,20 @@
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Sheet } from '@/components/ui/Sheet';
-import type { Category } from '@/lib/types';
+import type { Category, CategoryDisplayMode } from '@/lib/types';
 
 type Props = {
   open: boolean;
   onClose: () => void;
   category?: Category | null;
-  onSave: (cat: { id?: string; name: string; subtitle?: string | null; order: number }) => Promise<void>;
+  onSave: (cat: {
+    id?: string;
+    name: string;
+    subtitle?: string | null;
+    order: number;
+    display_mode?: CategoryDisplayMode;
+    price_columns?: string[];
+  }) => Promise<void>;
   nextOrder: number;
 };
 
@@ -17,6 +24,8 @@ export function CategoryModal({ open, onClose, category, onSave, nextOrder }: Pr
   const [name, setName] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [order, setOrder] = useState(0);
+  const [displayMode, setDisplayMode] = useState<CategoryDisplayMode>('standard');
+  const [priceColumnsText, setPriceColumnsText] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -25,10 +34,14 @@ export function CategoryModal({ open, onClose, category, onSave, nextOrder }: Pr
       setName(category.name);
       setSubtitle(category.subtitle ?? '');
       setOrder(category.order);
+      setDisplayMode(category.display_mode ?? 'standard');
+      setPriceColumnsText((category.price_columns ?? []).join(', '));
     } else {
       setName('');
       setSubtitle('');
       setOrder(nextOrder);
+      setDisplayMode('standard');
+      setPriceColumnsText('');
     }
     setError('');
   }, [category, nextOrder, open]);
@@ -44,11 +57,18 @@ export function CategoryModal({ open, onClose, category, onSave, nextOrder }: Pr
     try {
       setSaving(true);
       setError('');
+      const price_columns = priceColumnsText
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
       await onSave({
         id: category?.id,
         name: cleanName,
         subtitle: subtitle.trim() || null,
         order: Number(order) || 0,
+        display_mode: displayMode,
+        price_columns,
       });
       onClose();
     } catch (err: unknown) {
@@ -120,6 +140,48 @@ export function CategoryModal({ open, onClose, category, onSave, nextOrder }: Pr
           <p className="mt-1 text-[12px] text-subtle">
             Los números más bajos aparecen primero en el menú.
           </p>
+        </div>
+
+        {/* Arquetipo de visualización en Folleto / Editorial */}
+        <div className="rounded-2xl border border-black/10 bg-canvas/40 p-3.5 space-y-3">
+          <div>
+            <label htmlFor="cat-display-mode" className="label text-[13px] font-bold">
+              Diseño / Arquetipo en Folleto Digital
+            </label>
+            <select
+              id="cat-display-mode"
+              value={displayMode}
+              onChange={(e) => setDisplayMode(e.target.value as CategoryDisplayMode)}
+              className="input font-medium"
+            >
+              <option value="standard">Lista / Grilla Estándar (Dotted Line / Clásica)</option>
+              <option value="promo_cards">Cajas de Combos / Promos (2 columnas con chapitas)</option>
+              <option value="matrix_table">Tabla con Columnas de Precios (Pizzas Gde/Chica, Salsas, etc.)</option>
+              <option value="highlighted_box">Recuadro Destacado (Pizarra / Marco Píldora de Alto Impacto)</option>
+            </select>
+            <p className="mt-1 text-[11.5px] text-subtle">
+              Permite romper la monotonía visual del menú adaptando cada categoría a su formato óptimo.
+            </p>
+          </div>
+
+          {displayMode === 'matrix_table' && (
+            <div className="pt-1 animate-fade-in">
+              <label htmlFor="cat-price-cols" className="label text-[12.5px] font-semibold">
+                Columnas de Precios (separadas por coma)
+              </label>
+              <input
+                id="cat-price-cols"
+                type="text"
+                placeholder="Ej: Grande, Chica ó Salsa Clásica, Salsa Especial"
+                value={priceColumnsText}
+                onChange={(e) => setPriceColumnsText(e.target.value)}
+                className="input"
+              />
+              <p className="mt-1 text-[11px] text-subtle">
+                Los platos de esta categoría podrán cargar precios específicos para cada una de estas columnas.
+              </p>
+            </div>
+          )}
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

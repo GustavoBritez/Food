@@ -2,11 +2,11 @@
 
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Film, Loader2, Trash2 } from 'lucide-react';
+import { Camera, Film, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Sheet } from '@/components/ui/Sheet';
 import { uploadImage, uploadVideo } from '@/lib/storage';
 import { createClient } from '@/lib/supabase/client';
-import type { Category, Product, ProductBadge } from '@/lib/types';
+import type { Category, PriceVariant, Product, ProductBadge } from '@/lib/types';
 
 type Props = {
   open: boolean;
@@ -33,6 +33,8 @@ export function ProductModal({
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState<string>('');
   const [categoryId, setCategoryId] = useState('');
+  const [badgeLabel, setBadgeLabel] = useState('');
+  const [priceVariants, setPriceVariants] = useState<PriceVariant[]>([]);
   const [available, setAvailable] = useState(true);
   const [badges, setBadges] = useState<ProductBadge[]>([]);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -53,6 +55,8 @@ export function ProductModal({
       setDescription(product.description ?? '');
       setPrice(String(product.price));
       setCategoryId(product.category_id);
+      setBadgeLabel(product.badge_label ?? '');
+      setPriceVariants(product.price_variants ?? []);
       setAvailable(product.available);
       setBadges(product.badges ?? []);
       setPhotoUrl(product.photo_url);
@@ -62,7 +66,15 @@ export function ProductModal({
       setName('');
       setDescription('');
       setPrice('');
-      setCategoryId(categories[0]?.id ?? '');
+      const defaultCat = categories[0];
+      setCategoryId(defaultCat?.id ?? '');
+      setBadgeLabel('');
+      // Si la categoría por defecto tiene columnas de precio, inicializarlas
+      if (defaultCat?.price_columns && defaultCat.price_columns.length > 0) {
+        setPriceVariants(defaultCat.price_columns.map((col) => ({ label: col, price: 0 })));
+      } else {
+        setPriceVariants([]);
+      }
       setAvailable(true);
       setBadges([]);
       setPhotoUrl(null);
@@ -129,6 +141,10 @@ export function ProductModal({
     try {
       setSaving(true);
       setError('');
+      const cleanVariants = priceVariants
+        .filter((v) => v.label.trim() && !isNaN(Number(v.price)))
+        .map((v) => ({ label: v.label.trim(), price: Number(v.price) }));
+
       await onSave({
         id: product?.id,
         store_id: storeId,
@@ -138,6 +154,8 @@ export function ProductModal({
         price: numPrice,
         photo_url: photoUrl,
         video_url: videoUrl,
+        badge_label: badgeLabel.trim() || null,
+        price_variants: cleanVariants,
         available,
         badges,
         order: Number(order) || 0,
@@ -293,7 +311,7 @@ export function ProductModal({
 
           <div>
             <label htmlFor="prod-price" className="label">
-              Precio ($)
+              Precio General ($)
             </label>
             <input
               id="prod-price"
@@ -307,6 +325,92 @@ export function ProductModal({
               className="input tabular-nums"
             />
           </div>
+        </div>
+
+        {/* Chapita / Etiqueta de Promo */}
+        <div>
+          <label htmlFor="prod-badge-label" className="label">
+            Chapita o Etiqueta Destacada (opcional)
+          </label>
+          <input
+            id="prod-badge-label"
+            type="text"
+            maxLength={25}
+            placeholder="Ej: PROMO 1, COMBO 4, PARA 2 PERSONAS"
+            value={badgeLabel}
+            onChange={(e) => setBadgeLabel(e.target.value)}
+            className="input"
+          />
+          <p className="mt-1 text-[11.5px] text-subtle">
+            Se muestra como una píldora llamativa sobre el plato en el Folleto Digital.
+          </p>
+        </div>
+
+        {/* Múltiples Precios / Variantes (Grande / Chica, etc.) */}
+        <div className="rounded-2xl border border-black/10 bg-canvas/40 p-3.5 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[12.5px] font-bold text-ink">Precios por Tamaño / Variante</p>
+              <p className="text-[11px] text-subtle">
+                Ideal para Pizzas (Gde / Chica), Pastas (Clásica / Especial) o promociones.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPriceVariants((prev) => [...prev, { label: '', price: 0 }])}
+              className="inline-flex items-center gap-1 rounded-lg bg-black/5 hover:bg-black/10 px-2.5 py-1 text-[11.5px] font-semibold text-ink transition active:scale-95"
+            >
+              <Plus className="h-3.5 w-3.5" /> Agregar variante
+            </button>
+          </div>
+
+          {priceVariants.length > 0 ? (
+            <div className="space-y-2">
+              {priceVariants.map((v, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Tamaño (ej: Grande)"
+                    value={v.label}
+                    onChange={(e) => {
+                      const updated = [...priceVariants];
+                      updated[idx].label = e.target.value;
+                      setPriceVariants(updated);
+                    }}
+                    className="input h-9 flex-1 text-[13px]"
+                  />
+                  <div className="relative w-32 shrink-0">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-subtle text-xs font-bold">$</span>
+                    <input
+                      type="number"
+                      step="any"
+                      min={0}
+                      placeholder="Precio"
+                      value={v.price || ''}
+                      onChange={(e) => {
+                        const updated = [...priceVariants];
+                        updated[idx].price = Number(e.target.value);
+                        setPriceVariants(updated);
+                      }}
+                      className="input h-9 pl-6 pr-2 tabular-nums text-[13px]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPriceVariants((prev) => prev.filter((_, i) => i !== idx))}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-red-500 hover:bg-red-500/10 transition"
+                    title="Eliminar variante"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[12px] text-muted italic">
+              Sin variantes cargadas. Se usará el precio general ($ {price || '0'}).
+            </p>
+          )}
         </div>
 
         {/* Descripción */}

@@ -61,12 +61,21 @@ export type Store = {
   extra_branches_purchased?: number;
 };
 
+export type CategoryDisplayMode = 'standard' | 'promo_cards' | 'matrix_table' | 'highlighted_box';
+
+export type PriceVariant = {
+  label: string;
+  price: number;
+};
+
 export type Category = {
   id: string;
   store_id: string;
   name: string;
   subtitle?: string | null;
   order: number;
+  display_mode?: CategoryDisplayMode;
+  price_columns?: string[];
 };
 
 export type Product = {
@@ -80,6 +89,8 @@ export type Product = {
   video_url: string | null;
   available: boolean;
   badges?: ProductBadge[];
+  badge_label?: string | null;
+  price_variants?: PriceVariant[];
   /** IDs de sucursales o food trucks donde este plato está oculto */
   excluded_store_ids?: string[];
   order: number;

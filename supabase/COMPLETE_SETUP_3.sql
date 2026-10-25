@@ -115,6 +115,17 @@ create table if not exists public.products (
 
 alter table public.products add column if not exists excluded_store_ids uuid[] not null default '{}';
 
+-- Soporte para Arquetipos de Folleto Digital y Variantes de Precio Simples
+alter table public.categories
+  add column if not exists subtitle text check (subtitle is null or char_length(subtitle) <= 180),
+  add column if not exists display_mode text not null default 'standard'
+    check (display_mode in ('standard', 'promo_cards', 'matrix_table', 'highlighted_box')),
+  add column if not exists price_columns text[] not null default '{}';
+
+alter table public.products
+  add column if not exists badge_label text check (badge_label is null or char_length(badge_label) <= 25),
+  add column if not exists price_variants jsonb not null default '[]'::jsonb;
+
 -- MP_WEBHOOK_EVENTS: Tabla de idempotencia para webhooks de Mercado Pago
 create table if not exists public.mp_webhook_events (
   id          text primary key,

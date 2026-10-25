@@ -75,6 +75,7 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
   const headerRef = useRef<HTMLElement>(null);
   const [query, setQuery] = useState('');
   const [activeCat, setActiveCat] = useState<string | null>(null);
+  const [variantModalProduct, setVariantModalProduct] = useState<Product | null>(null);
 
   const themeConfig = store.theme_config ?? {};
   const fontPair = (themeConfig.fontPair || 'modern') as FontPair;
@@ -296,203 +297,437 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
               </button>
             </div>
           ) : (
-            filtered.map(({ category, products }) => (
-              <section
-                key={category.id}
-                id={idPrefix + category.id}
-                className="mb-14 scroll-mt-24 last:mb-6"
-              >
-                {/* Encabezado de Categoría Editorial */}
-                <div className="mb-6 text-center">
-                  <div className="flex items-center justify-center gap-3">
-                    <span className="h-px w-8 sm:w-16 bg-current opacity-20" />
-                    <h2
-                      className={cn(
-                        'text-[20px] sm:text-[24px] tracking-wide text-ink',
-                        FONT_TITLE_MAP[fontPair]
-                      )}
-                    >
-                      {category.name}
-                    </h2>
-                    <span className="h-px w-8 sm:w-16 bg-current opacity-20" />
-                  </div>
-                  {category.subtitle && (
-                    <p
-                      className={cn(
-                        'mt-1 max-w-lg mx-auto text-[13px] sm:text-[14px] italic leading-relaxed opacity-75',
-                        isDark ? 'text-neutral-300' : 'text-neutral-700'
-                      )}
-                    >
-                      {category.subtitle}
-                    </p>
+            filtered.map(({ category, products }) => {
+              const displayMode = category.display_mode || 'standard';
+              const isHighlighted = displayMode === 'highlighted_box';
+              const priceCols =
+                category.price_columns && category.price_columns.length > 0
+                  ? category.price_columns
+                  : ['Normal'];
+
+              return (
+                <section
+                  key={category.id}
+                  id={idPrefix + category.id}
+                  className={cn(
+                    'mb-14 scroll-mt-24 last:mb-6 transition-all',
+                    isHighlighted &&
+                      (isDark
+                        ? 'rounded-3xl border-2 border-white/20 bg-neutral-900/90 p-5 sm:p-7 shadow-2xl shadow-black/50'
+                        : 'rounded-3xl border-2 border-neutral-900 bg-neutral-950 p-5 sm:p-7 text-white shadow-2xl')
                   )}
-                </div>
+                >
+                  {/* Encabezado de Categoría Editorial */}
+                  <div className="mb-6 text-center">
+                    <div className="flex items-center justify-center gap-3">
+                      <span className="h-px w-8 sm:w-16 bg-current opacity-20" />
+                      <h2
+                        className={cn(
+                          'text-[20px] sm:text-[24px] tracking-wide',
+                          isHighlighted ? 'text-white' : 'text-ink',
+                          FONT_TITLE_MAP[fontPair]
+                        )}
+                      >
+                        {category.name}
+                      </h2>
+                      <span className="h-px w-8 sm:w-16 bg-current opacity-20" />
+                    </div>
+                    {category.subtitle && (
+                      <p
+                        className={cn(
+                          'mt-1 max-w-lg mx-auto text-[13px] sm:text-[14px] italic leading-relaxed opacity-75',
+                          isHighlighted
+                            ? 'text-neutral-300'
+                            : isDark
+                            ? 'text-neutral-300'
+                            : 'text-neutral-700'
+                        )}
+                      >
+                        {category.subtitle}
+                      </p>
+                    )}
+                  </div>
 
-                {/* Lista de Platos Editorial con protección anti-superposición */}
-                <div className="divide-y divide-current/10 space-y-5">
-                  {products.map((p) => {
-                    const qty = actions.qtyOf(p.id);
-                    const netPrice = showNetPrice ? Math.round(p.price / 1.21) : null;
-                    const badges = p.badges ?? [];
+                  {/* 1. MODO PROMO_CARDS (Grilla de 2 columnas tipo La Tradicional / Como en Perú) */}
+                  {displayMode === 'promo_cards' ? (
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                      {products.map((p) => {
+                        const qty = actions.qtyOf(p.id);
+                        return (
+                          <article
+                            key={p.id}
+                            className={cn(
+                              'group relative flex flex-col justify-between overflow-hidden rounded-2xl border-2 p-3 sm:p-4 transition hover:shadow-lg',
+                              isHighlighted || isDark
+                                ? 'border-white/15 bg-white/[0.05] text-white hover:border-[var(--accent)]'
+                                : 'border-neutral-900/20 bg-black/[0.02] text-neutral-950 hover:border-[var(--accent)]'
+                            )}
+                          >
+                            {/* Chapita con el color del local */}
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="inline-flex items-center rounded-md bg-[var(--accent)] px-2 py-0.5 text-[10.5px] font-black uppercase tracking-wider text-[var(--accent-fg)] shadow-xs">
+                                {p.badge_label || 'PROMO'}
+                              </span>
+                              {qty > 0 && (
+                                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold text-[var(--accent-fg)]">
+                                  {qty}
+                                </span>
+                              )}
+                            </div>
 
-                    return (
-                      <article key={p.id} className="pt-5 first:pt-0 group">
-                        <div className="flex items-start justify-between gap-3 sm:gap-4">
-                          {/* Columna Izquierda: Título, precio, badges, descripción y botones */}
-                          <div className="min-w-0 flex-1">
-                            {/* Fila del Título y Precio con Dotted Leader fluido */}
-                            {priceFormat === 'inline-dot' ? (
-                              <div className="flex items-baseline gap-2 min-w-0">
-                                <h3
+                            {/* Centro: Descripción centrada en negrita */}
+                            <div className="my-2.5 flex-1 text-center">
+                              <h3 className="text-[14px] sm:text-[16px] font-extrabold leading-tight tracking-tight">
+                                {p.name}
+                              </h3>
+                              {p.description && (
+                                <p
                                   className={cn(
-                                    'text-[16px] sm:text-[18px] font-semibold leading-snug break-words',
-                                    isDark ? 'text-white' : 'text-neutral-950'
+                                    'mt-1 text-[11.5px] sm:text-[12.5px] leading-snug line-clamp-3',
+                                    isHighlighted || isDark ? 'text-neutral-300' : 'text-neutral-600'
                                   )}
                                 >
-                                  {p.name}
-                                </h3>
-                                <span className="flex-1 min-w-[8px] border-b border-dotted border-current/35 mb-1" />
-                                <span className="shrink-0 font-bold tabular-nums text-[var(--accent)] whitespace-nowrap pl-0.5">
-                                  • {formatPrice(p.price)}
-                                </span>
-                              </div>
-                            ) : priceFormat === 'minimal' ? (
-                              <div className="flex items-baseline justify-between gap-2 min-w-0">
-                                <h3
-                                  className={cn(
-                                    'text-[16px] sm:text-[18px] font-semibold leading-snug break-words',
-                                    isDark ? 'text-white' : 'text-neutral-950'
-                                  )}
-                                >
-                                  {p.name}
-                                </h3>
-                                <span className="shrink-0 font-semibold tabular-nums whitespace-nowrap opacity-90">
-                                  {formatPrice(p.price)}
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="flex items-baseline justify-between gap-2 min-w-0">
-                                <h3
-                                  className={cn(
-                                    'text-[16px] sm:text-[18px] font-semibold leading-snug break-words',
-                                    isDark ? 'text-white' : 'text-neutral-950'
-                                  )}
-                                >
-                                  {p.name}
-                                </h3>
-                                <span className="shrink-0 inline-flex items-center rounded-full bg-[var(--accent)]/15 px-2.5 py-0.5 text-[14px] font-bold tabular-nums text-[var(--accent)] whitespace-nowrap">
-                                  {formatPrice(p.price)}
-                                </span>
-                              </div>
-                            )}
+                                  {p.description}
+                                </p>
+                              )}
+                            </div>
 
-                            {/* Badges gastronómicos debajo del título para no empujar el precio */}
-                            {badges.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 mt-1">
-                                {badges.map((badge) => {
-                                  const conf = BADGE_CONFIG[badge];
-                                  if (!conf) return null;
-                                  return (
-                                    <span
-                                      key={badge}
-                                      className={cn(
-                                        'inline-flex items-center gap-1 rounded-full border px-2 py-0.2 text-[10px] font-medium tracking-wide',
-                                        conf.color
-                                      )}
-                                    >
-                                      {conf.icon}
-                                      <span>{conf.label}</span>
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            )}
-
-                            {/* Descripción del plato */}
-                            {p.description && (
-                              <p
-                                className={cn(
-                                  'mt-1.5 text-[13px] sm:text-[14px] leading-relaxed break-words',
-                                  isDark ? 'text-neutral-300' : 'text-neutral-600'
-                                )}
-                              >
-                                {p.description}
-                              </p>
-                            )}
-
-                            {/* Desglose de impuesto si showNetPrice está activado */}
-                            {showNetPrice && netPrice !== null && (
-                              <p className="mt-1 text-[11px] font-mono tracking-wide opacity-65">
-                                Base imponible sin IVA (21%): {formatPrice(netPrice)}
-                              </p>
-                            )}
-
-                            {/* Botones de acción */}
-                            <div className="mt-3 flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => actions.orderAtTable(p)}
-                                className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[12px] font-semibold transition active:scale-95 shadow-xs bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-105"
-                                title="Agregar al pedido de la mesa"
-                              >
-                                <HandPlatter className="h-3.5 w-3.5 shrink-0" />
-                                <span>+ En mesa</span>
-                                {qty > 0 && (
-                                  <span className="ml-1 grid h-4 min-w-4 place-items-center rounded-full bg-white/30 px-1 text-[10px] font-bold">
-                                    {qty}
-                                  </span>
-                                )}
-                              </button>
-
+                            {/* Abajo: Píldora / Banda sólida con precio gigante y 1-clic a WhatsApp */}
+                            <div className="mt-1 flex flex-col gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => actions.orderOneByWhatsApp(p)}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#25D366] text-white transition hover:brightness-95 active:scale-95 shadow-xs"
-                                title="Pedir por WhatsApp"
-                                aria-label="Pedir por WhatsApp"
+                                className="flex h-10 w-full items-center justify-between rounded-xl bg-[var(--accent)] px-3 text-[var(--accent-fg)] font-bold transition hover:brightness-105 active:scale-95 shadow-sm"
+                                title="Pedir combo por WhatsApp con 1 clic"
                               >
+                                <span className="text-[15px] sm:text-[17px] font-black tracking-tight tabular-nums">
+                                  {formatPrice(p.price)}
+                                </span>
                                 <WhatsAppIcon className="h-4 w-4 shrink-0" />
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => actions.orderAtTable(p)}
+                                className={cn(
+                                  'flex h-7 w-full items-center justify-center gap-1 rounded-lg text-[11px] font-semibold transition active:scale-95',
+                                  isHighlighted || isDark
+                                    ? 'bg-white/10 text-white hover:bg-white/15'
+                                    : 'bg-black/5 text-neutral-800 hover:bg-black/10'
+                                )}
+                              >
+                                <HandPlatter className="h-3 w-3" />
+                                <span>+ Mesa</span>
+                              </button>
                             </div>
-                          </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  ) : displayMode === 'matrix_table' ? (
+                    /* 2. MODO MATRIX_TABLE (Columnas de precios alineadas a la derecha como Nuevo Tobago) */
+                    <div
+                      className={cn(
+                        'overflow-hidden rounded-2xl border',
+                        isHighlighted || isDark ? 'border-white/15' : 'border-neutral-900/15'
+                      )}
+                    >
+                      {/* Encabezado con columnas alineadas a la derecha */}
+                      <div
+                        className={cn(
+                          'flex items-center justify-between border-b px-3.5 sm:px-4 py-2.5 text-[11px] sm:text-[12px] font-black uppercase tracking-wider',
+                          isHighlighted || isDark
+                            ? 'bg-white/5 border-white/10 text-neutral-300'
+                            : 'bg-black/[0.04] border-black/10 text-neutral-700'
+                        )}
+                      >
+                        <span className="flex-1">Variedad / Plato</span>
+                        <div className="flex items-center gap-2 sm:gap-4 shrink-0 text-right">
+                          {priceCols.map((col) => (
+                            <span key={col} className="w-16 sm:w-20 text-center font-bold">
+                              {col}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
 
-                          {/* Foto opcional del plato (a la derecha con separación estricta) */}
-                          {p.photo_url && (
+                      {/* Filas con múltiples precios */}
+                      <div className="divide-y divide-current/10">
+                        {products.map((p) => {
+                          const variants = p.price_variants ?? [];
+                          return (
                             <div
+                              key={p.id}
                               className={cn(
-                                'relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-2xl shadow-xs border',
-                                isDark
-                                  ? 'bg-neutral-800 border-white/10'
-                                  : 'bg-black/[0.04] border-black/[0.08]'
+                                'flex items-center justify-between gap-2 sm:gap-3 px-3.5 sm:px-4 py-3 transition hover:bg-current/[0.03]',
+                                isHighlighted || isDark ? 'text-white' : 'text-neutral-900'
                               )}
                             >
-                              <Image
-                                src={p.photo_url}
-                                alt={p.name}
-                                fill
-                                sizes="96px"
-                                className="object-cover transition duration-300 group-hover:scale-105"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <h3 className="text-[13.5px] sm:text-[15px] font-bold leading-tight">
+                                    {p.name}
+                                  </h3>
+                                  {p.badge_label && (
+                                    <span className="rounded bg-[var(--accent)]/15 px-1.5 py-0.2 text-[9.5px] font-bold text-[var(--accent)] uppercase">
+                                      {p.badge_label}
+                                    </span>
+                                  )}
+                                </div>
+                                {p.description && (
+                                  <p
+                                    className={cn(
+                                      'text-[11.5px] sm:text-[12px] truncate opacity-70 mt-0.5',
+                                      isHighlighted || isDark ? 'text-neutral-300' : 'text-neutral-600'
+                                    )}
+                                  >
+                                    {p.description}
+                                  </p>
+                                )}
+                              </div>
 
-                {/* Sello / Marca de agua de autor al pie de cada categoría */}
-                {showWatermark && (
-                  <div className="mt-8 pt-4 flex items-center justify-center gap-2 text-center opacity-40">
-                    <span className="h-px w-10 bg-current" />
-                    <span className="text-[10px] font-mono tracking-widest uppercase flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" /> Selección de Autor · {store.name}
-                    </span>
-                    <span className="h-px w-10 bg-current" />
-                  </div>
-                )}
-              </section>
-            ))
+                              {/* Columnas de precios */}
+                              <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                                {priceCols.map((col) => {
+                                  const matchVar = variants.find(
+                                    (v) => v.label.toLowerCase() === col.toLowerCase()
+                                  );
+                                  const priceVal = matchVar
+                                    ? matchVar.price
+                                    : variants.length === 0
+                                    ? p.price
+                                    : null;
+                                  const varQty = matchVar
+                                    ? actions.qtyOf(p.id, matchVar.label)
+                                    : 0;
+
+                                  if (priceVal === null) {
+                                    return (
+                                      <span
+                                        key={col}
+                                        className="w-16 sm:w-20 text-center font-mono text-[11px] opacity-30"
+                                      >
+                                        —
+                                      </span>
+                                    );
+                                  }
+
+                                  return (
+                                    <button
+                                      key={col}
+                                      type="button"
+                                      onClick={() => {
+                                        if (matchVar) {
+                                          actions.orderAtTable(p, matchVar);
+                                        } else {
+                                          setVariantModalProduct(p);
+                                        }
+                                      }}
+                                      className={cn(
+                                        'relative flex w-16 sm:w-20 flex-col items-center justify-center rounded-xl border px-1 py-1 text-center transition active:scale-95 shadow-2xs',
+                                        isHighlighted || isDark
+                                          ? 'border-white/15 bg-white/5 hover:border-[var(--accent)] hover:bg-[var(--accent)]/15'
+                                          : 'border-black/10 bg-white hover:border-[var(--accent)] hover:bg-[var(--accent)]/10'
+                                      )}
+                                      title={`Agregar ${p.name} (${col})`}
+                                    >
+                                      <span className="text-[12px] sm:text-[13px] font-black tabular-nums text-[var(--accent)]">
+                                        {formatPrice(priceVal)}
+                                      </span>
+                                      {varQty > 0 && (
+                                        <span className="absolute -top-1.5 -right-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[9px] font-bold text-[var(--accent-fg)]">
+                                          {varQty}
+                                        </span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    /* 3. MODO STANDARD (Lista Editorial Clásica con dotted line o badges) */
+                    <div className="divide-y divide-current/10 space-y-5">
+                      {products.map((p) => {
+                        const qty = actions.qtyOf(p.id);
+                        const netPrice = showNetPrice ? Math.round(p.price / 1.21) : null;
+                        const badges = p.badges ?? [];
+                        const hasVariants = Boolean(p.price_variants && p.price_variants.length > 0);
+
+                        return (
+                          <article key={p.id} className="pt-5 first:pt-0 group">
+                            <div className="flex items-start justify-between gap-3 sm:gap-4">
+                              <div className="min-w-0 flex-1">
+                                {priceFormat === 'inline-dot' ? (
+                                  <div className="flex items-baseline gap-2 min-w-0">
+                                    <h3
+                                      className={cn(
+                                        'text-[16px] sm:text-[18px] font-semibold leading-snug break-words',
+                                        isHighlighted ? 'text-white' : isDark ? 'text-white' : 'text-neutral-950'
+                                      )}
+                                    >
+                                      {p.name}
+                                    </h3>
+                                    <span className="flex-1 min-w-[8px] border-b border-dotted border-current/35 mb-1" />
+                                    <span className="shrink-0 font-bold tabular-nums text-[var(--accent)] whitespace-nowrap pl-0.5">
+                                      • {formatPrice(p.price)}
+                                    </span>
+                                  </div>
+                                ) : priceFormat === 'minimal' ? (
+                                  <div className="flex items-baseline justify-between gap-2 min-w-0">
+                                    <h3
+                                      className={cn(
+                                        'text-[16px] sm:text-[18px] font-semibold leading-snug break-words',
+                                        isHighlighted ? 'text-white' : isDark ? 'text-white' : 'text-neutral-950'
+                                      )}
+                                    >
+                                      {p.name}
+                                    </h3>
+                                    <span className="shrink-0 font-semibold tabular-nums whitespace-nowrap opacity-90">
+                                      {formatPrice(p.price)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-baseline justify-between gap-2 min-w-0">
+                                    <h3
+                                      className={cn(
+                                        'text-[16px] sm:text-[18px] font-semibold leading-snug break-words',
+                                        isHighlighted ? 'text-white' : isDark ? 'text-white' : 'text-neutral-950'
+                                      )}
+                                    >
+                                      {p.name}
+                                    </h3>
+                                    <span className="shrink-0 inline-flex items-center rounded-full bg-[var(--accent)]/15 px-2.5 py-0.5 text-[14px] font-bold tabular-nums text-[var(--accent)] whitespace-nowrap">
+                                      {formatPrice(p.price)}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {p.badge_label && (
+                                  <span className="mt-1 inline-block rounded bg-[var(--accent)]/15 px-2 py-0.5 text-[10px] font-bold text-[var(--accent)] uppercase tracking-wider">
+                                    {p.badge_label}
+                                  </span>
+                                )}
+
+                                {badges.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 mt-1">
+                                    {badges.map((badge) => {
+                                      const conf = BADGE_CONFIG[badge];
+                                      if (!conf) return null;
+                                      return (
+                                        <span
+                                          key={badge}
+                                          className={cn(
+                                            'inline-flex items-center gap-1 rounded-full border px-2 py-0.2 text-[10px] font-medium tracking-wide',
+                                            conf.color
+                                          )}
+                                        >
+                                          {conf.icon}
+                                          <span>{conf.label}</span>
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+
+                                {p.description && (
+                                  <p
+                                    className={cn(
+                                      'mt-1.5 text-[13px] sm:text-[14px] leading-relaxed break-words',
+                                      isHighlighted || isDark ? 'text-neutral-300' : 'text-neutral-600'
+                                    )}
+                                  >
+                                    {p.description}
+                                  </p>
+                                )}
+
+                                {showNetPrice && netPrice !== null && (
+                                  <p className="mt-1 text-[11px] font-mono tracking-wide opacity-65">
+                                    Base imponible sin IVA (21%): {formatPrice(netPrice)}
+                                  </p>
+                                )}
+
+                                {/* Botones de acción */}
+                                <div className="mt-3 flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (hasVariants) {
+                                        setVariantModalProduct(p);
+                                      } else {
+                                        actions.orderAtTable(p);
+                                      }
+                                    }}
+                                    className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[12px] font-semibold transition active:scale-95 shadow-xs bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-105"
+                                    title="Agregar al pedido de la mesa"
+                                  >
+                                    <HandPlatter className="h-3.5 w-3.5 shrink-0" />
+                                    <span>{hasVariants ? '+ Elegir tamaño' : '+ En mesa'}</span>
+                                    {qty > 0 && (
+                                      <span className="ml-1 grid h-4 min-w-4 place-items-center rounded-full bg-white/30 px-1 text-[10px] font-bold">
+                                        {qty}
+                                      </span>
+                                    )}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (hasVariants) {
+                                        setVariantModalProduct(p);
+                                      } else {
+                                        actions.orderOneByWhatsApp(p);
+                                      }
+                                    }}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#25D366] text-white transition hover:brightness-95 active:scale-95 shadow-xs"
+                                    title="Pedir por WhatsApp"
+                                    aria-label="Pedir por WhatsApp"
+                                  >
+                                    <WhatsAppIcon className="h-4 w-4 shrink-0" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {p.photo_url && (
+                                <div
+                                  className={cn(
+                                    'relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-2xl shadow-xs border',
+                                    isHighlighted || isDark
+                                      ? 'bg-neutral-800 border-white/10'
+                                      : 'bg-black/[0.04] border-black/[0.08]'
+                                  )}
+                                >
+                                  <Image
+                                    src={p.photo_url}
+                                    alt={p.name}
+                                    fill
+                                    sizes="96px"
+                                    className="object-cover transition duration-300 group-hover:scale-105"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Sello / Marca de agua de autor al pie de cada categoría */}
+                  {showWatermark && (
+                    <div className="mt-8 pt-4 flex items-center justify-center gap-2 text-center opacity-40">
+                      <span className="h-px w-10 bg-current" />
+                      <span className="text-[10px] font-mono tracking-widest uppercase flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" /> Selección de Autor · {store.name}
+                      </span>
+                      <span className="h-px w-10 bg-current" />
+                    </div>
+                  )}
+                </section>
+              );
+            })
           )}
 
           {/* Sello de Calidad / Pie de Página Editorial */}
@@ -507,6 +742,76 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
           </footer>
         </main>
       </div>
+
+      {/* Mini-Selector Flotante de Variantes / Tamaños */}
+      {variantModalProduct && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-xs animate-fade-in"
+          onClick={() => setVariantModalProduct(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-t-3xl sm:rounded-2xl border border-white/10 bg-neutral-900 p-5 text-white shadow-2xl animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="text-[16px] font-bold">{variantModalProduct.name}</h4>
+                <p className="text-[12px] text-neutral-400">¿Qué tamaño o opción querés agregar?</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVariantModalProduct(null)}
+                className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-white/80 hover:bg-white/20"
+                aria-label="Cerrar selector"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {(variantModalProduct.price_variants && variantModalProduct.price_variants.length > 0
+                ? variantModalProduct.price_variants
+                : [{ label: 'Estándar', price: variantModalProduct.price }]
+              ).map((v) => (
+                <div
+                  key={v.label}
+                  className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-2.5 transition hover:bg-white/10"
+                >
+                  <div>
+                    <p className="text-[14px] font-semibold text-white">{v.label}</p>
+                    <p className="text-[13px] font-extrabold text-[var(--accent)]">{formatPrice(v.price)}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        actions.orderAtTable(variantModalProduct, v);
+                        setVariantModalProduct(null);
+                      }}
+                      className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[11px] font-bold text-[var(--accent-fg)] transition hover:brightness-105 active:scale-95"
+                    >
+                      + Mesa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        actions.orderOneByWhatsApp(variantModalProduct, v);
+                        setVariantModalProduct(null);
+                      }}
+                      className="grid h-8 w-8 place-items-center rounded-lg bg-[#25D366] text-white transition hover:brightness-95 active:scale-95"
+                      title="Pedir opción por WhatsApp"
+                    >
+                      <WhatsAppIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Barra de Pedido Flotante */}
       {actions.count > 0 && (
