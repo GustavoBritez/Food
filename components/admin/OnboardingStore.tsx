@@ -5,7 +5,7 @@ import { ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { createClient } from '@/lib/supabase/client';
 import type { Store } from '@/lib/types';
-import { normalizeWhatsapp, SLUG_REGEX, slugify } from '@/lib/utils';
+import { isReservedSlug, normalizeWhatsapp, SLUG_REGEX, slugify } from '@/lib/utils';
 
 type Props = {
   userId: string;
@@ -36,6 +36,10 @@ export function OnboardingStore({ userId, onCreated }: Props) {
     }
     if (!SLUG_REGEX.test(cleanSlug)) {
       setError('El link solo puede contener letras minúsculas, números y guiones.');
+      return;
+    }
+    if (isReservedSlug(cleanSlug)) {
+      setError(`El link "/p/${cleanSlug}" está reservado por el sistema. Elegí otro.`);
       return;
     }
     if (!cleanWp || cleanWp.length < 8) {

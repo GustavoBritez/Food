@@ -6,7 +6,7 @@ import { Sheet } from '@/components/ui/Sheet';
 import { createClient } from '@/lib/supabase/client';
 import { BASE_INCLUDED_BRANCHES, BASE_INCLUDED_STORES, EXTRA_BRANCH_PRICE } from '@/lib/mercadopago';
 import type { Store } from '@/lib/types';
-import { normalizeWhatsapp, SLUG_REGEX, slugify } from '@/lib/utils';
+import { isReservedSlug, normalizeWhatsapp, SLUG_REGEX, slugify } from '@/lib/utils';
 
 type Props = {
   open: boolean;
@@ -95,6 +95,10 @@ export function BranchModal({
       setError('El link solo puede contener letras minúsculas, números y guiones.');
       return;
     }
+    if (isReservedSlug(cleanSlug)) {
+      setError(`El link "/p/${cleanSlug}" está reservado por el sistema. Elegí otro.`);
+      return;
+    }
     if (!cleanWp || cleanWp.length < 8) {
       setError('Ingresá un número de WhatsApp válido.');
       return;
@@ -150,8 +154,6 @@ export function BranchModal({
           bg_color: mainStore.bg_color,
           button_style: mainStore.button_style,
           theme_config: mainStore.theme_config,
-          subscription_status: mainStore.subscription_status || 'active',
-          current_period_end: mainStore.current_period_end,
         })
         .select()
         .single();

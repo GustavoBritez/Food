@@ -7,6 +7,7 @@ import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 import { FeedView } from './FeedView';
 import { ListView } from './ListView';
 import { EditorialView } from './EditorialView';
+import { MainMenuFloatingButton } from './MainMenuFloatingButton';
 import { useCart } from './useCart';
 import type { Category, Product, PublicStore } from '@/lib/types';
 import { buildOrderMessage, orderCount, orderTotal, whatsappUrl, type OrderLine } from '@/lib/order';
@@ -184,6 +185,13 @@ export function PublicMenu({ store, categories, products, preview = false }: Pro
           const ActiveView = LAYOUT_STRATEGIES[store.layout] ?? FeedView;
           return <ActiveView store={store} sections={sections} actions={actions} preview={preview} />;
         })()}
+
+        {/* Botón inferior hacia el Menú Principal estilo Instagram (/menu-principal) */}
+        <MainMenuFloatingButton
+          storeSlug={store.slug}
+          hasCartItems={count > 0}
+          preview={preview}
+        />
 
         {/* Modal / Sheet del Carrito */}
         <Sheet open={cartOpen} onClose={() => setCartOpen(false)} title="Tu pedido" {...sheetProps}>

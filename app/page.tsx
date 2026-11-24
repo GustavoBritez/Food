@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowRight, HandPlatter, QrCode, Smartphone } from 'lucide-react';
+import { ArrowRight, Flame, HandPlatter, QrCode, Smartphone } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { PwaInstallButton } from '@/components/PwaInstallButton';
 import { WhatsAppIcon } from '@/components/WhatsAppIcon';
@@ -44,12 +44,18 @@ export default function HomePage({ searchParams }: Props) {
             le muestran el pedido al mozo o te piden directo por WhatsApp.
           </p>
 
-          <div className="mt-4 sm:mt-6 flex flex-row items-center justify-center gap-3">
+          <div className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link href="/login" className="btn-primary h-11 px-6 text-[14px] sm:text-[15px]">
               Crear mi menú gratis <ArrowRight className="h-4 w-4" />
             </Link>
             <Link href="/p/demo" className="btn-secondary h-11 px-5 text-[14px] sm:text-[15px]">
               Ver un ejemplo
+            </Link>
+            <Link
+              href="/menu-principal"
+              className="btn h-11 px-5 text-[14px] sm:text-[15px] bg-gradient-to-r from-amber-500 via-rose-500 to-fuchsia-600 text-white shadow-md hover:brightness-105"
+            >
+              <Flame className="h-4 w-4 fill-current" /> Menú Principal · Promos
             </Link>
           </div>
         </div>

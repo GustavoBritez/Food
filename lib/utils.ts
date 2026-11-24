@@ -35,9 +35,20 @@ export const HEX_REGEX = /^#[0-9a-fA-F]{6}$/;
 export const DEFAULT_ACCENT = '#22c55e';
 
 /** Slugs que usa la app (también bloqueados en la base de datos) */
-export const RESERVED_SLUGS = ['demo', 'admin', 'login', 'api', 'auth', 'p'];
+export const RESERVED_SLUGS = [
+  'demo',
+  'demo-truck',
+  'admin',
+  'login',
+  'api',
+  'auth',
+  'p',
+  'menu-principal',
+  'explorar',
+  'promos',
+];
 export function isReservedSlug(slug: string) {
-  return RESERVED_SLUGS.includes(slug);
+  return RESERVED_SLUGS.includes(slug.trim().toLowerCase());
 }
 
 /** Texto negro o blanco según qué se lea mejor sobre el color de marca */

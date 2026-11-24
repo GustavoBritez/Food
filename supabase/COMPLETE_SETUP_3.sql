@@ -74,7 +74,7 @@ alter table public.stores add constraint stores_layout_check check (layout in ('
 -- Slugs reservados que no pueden ser usados por ningún local
 alter table public.stores drop constraint if exists stores_slug_not_reserved;
 alter table public.stores add constraint stores_slug_not_reserved
-  check (slug not in ('demo', 'admin', 'login', 'api', 'auth', 'p'));
+  check (slug not in ('demo', 'demo-truck', 'admin', 'login', 'api', 'auth', 'p', 'menu-principal', 'explorar', 'promos'));
 
 -- Un dueño = un local principal (y hasta 2 sucursales / food trucks con parent_store_id)
 drop index if exists stores_created_by_key;
@@ -256,20 +256,49 @@ create trigger tr_protect_stores_billing
   execute function public.protect_stores_billing_columns();
 
 -- Trigger Anti-Abuso: Control estricto de hasta 3 locales en plan base (1 matriz + 2 sucursales/food trucks) + cupos extras ($25.000 ARS c/u)
+-- Además valida que parent_store_id pertenezca estrictamente al mismo dueño (Anti-Privilege Escalation) y no sea sucursal anidada.
 create or replace function public.check_store_branch_limit()
 returns trigger
 language plpgsql
 security definer
+set search_path = public
 as $$
 declare
   parent_extra int := 0;
+  parent_owner uuid := null;
+  parent_parent uuid := null;
   current_count int := 0;
+  jwt_role text := coalesce(
+    current_setting('request.jwt.claim.role', true),
+    (auth.role())::text,
+    ''
+  );
 begin
   if NEW.parent_store_id is not null then
-    select coalesce(extra_branches_purchased, 0)
-      into parent_extra
+    if TG_OP = 'UPDATE' and NEW.parent_store_id = OLD.parent_store_id then
+      return NEW;
+    end if;
+
+    if NEW.parent_store_id = NEW.id then
+      raise exception 'Operación inválida: Un local no puede ser sucursal de sí mismo.';
+    end if;
+
+    select coalesce(extra_branches_purchased, 0), created_by, parent_store_id
+      into parent_extra, parent_owner, parent_parent
       from public.stores
      where id = NEW.parent_store_id;
+
+    if not found then
+      raise exception 'El local principal especificado no existe.';
+    end if;
+
+    if parent_parent is not null then
+      raise exception 'No se permite crear sucursales anidadas dentro de otra sucursal.';
+    end if;
+
+    if jwt_role in ('authenticated', 'anon') and (parent_owner is null or parent_owner is distinct from (select auth.uid())) then
+      raise exception 'Acceso denegado: El local principal no pertenece a tu cuenta de usuario.';
+    end if;
 
     select count(*)
       into current_count
@@ -286,7 +315,7 @@ $$;
 
 drop trigger if exists tr_check_store_branch_limit on public.stores;
 create trigger tr_check_store_branch_limit
-  before insert on public.stores
+  before insert or update on public.stores
   for each row
   execute function public.check_store_branch_limit();
 
@@ -318,10 +347,17 @@ revoke all on table public.mp_webhook_events from anon, authenticated;
 grant all on table public.mp_webhook_events to service_role;
 
 -- STORES:
--- Lectura pública para comensales
+-- Lectura pública para comensales (rol anon con columnas públicas restringidas)
 drop policy if exists "stores: lectura publica" on public.stores;
 create policy "stores: lectura publica" on public.stores
-  for select using (true);
+  for select to anon
+  using (true);
+
+-- Lectura autenticada aislada por dueño (impide que un dueño autenticado lea mp_payment_id o datos de otros dueños)
+drop policy if exists "stores: lectura del dueño" on public.stores;
+create policy "stores: lectura del dueño" on public.stores
+  for select to authenticated
+  using (created_by = (select auth.uid()) or created_by is null);
 
 -- Creación solo para el usuario logueado
 drop policy if exists "stores: alta del dueño" on public.stores;
@@ -567,6 +603,103 @@ alter table public.products add constraint products_urls_https_check
     (photo_url is null or (photo_url ~ '^https://[^\s]+$' and char_length(photo_url) <= 500))
     and (video_url is null or (video_url ~ '^https://[^\s]+$' and char_length(video_url) <= 500))
   );
+
+-- =============================================================================
+-- 8. MENÚ PRINCIPAL ESTILO INSTAGRAM (MURO DE PROMOS CON AUTODESTRUCCIÓN 15 DÍAS)
+-- =============================================================================
+
+create table if not exists public.promo_posts (
+  id              uuid primary key default gen_random_uuid(),
+  store_id        uuid references public.stores (id) on delete cascade,
+  store_name      text not null check (char_length(store_name) between 2 and 80),
+  store_slug      text,
+  store_whatsapp  text not null check (store_whatsapp ~ '^[0-9]{8,15}$'),
+  store_logo_url  text check (store_logo_url is null or (store_logo_url ~ '^https://[^\s]+$' and char_length(store_logo_url) <= 500)),
+  image_url       text not null check (image_url ~ '^https://[^\s]+$' and char_length(image_url) <= 500),
+  storage_path    text,
+  caption         text not null check (char_length(caption) between 1 and 500),
+  promo_price     numeric(12, 2) check (promo_price is null or promo_price >= 0),
+  badge_text      text check (badge_text is null or char_length(badge_text) <= 30),
+  created_at      timestamptz not null default now(),
+  expires_at      timestamptz not null default (now() + interval '15 days')
+);
+
+create index if not exists promo_posts_expires_at_idx on public.promo_posts (expires_at desc);
+create index if not exists promo_posts_created_at_idx on public.promo_posts (created_at desc);
+create index if not exists promo_posts_store_id_idx on public.promo_posts (store_id);
+
+alter table public.promo_posts enable row level security;
+
+revoke all on table public.promo_posts from anon, authenticated;
+grant select on table public.promo_posts to anon, authenticated, service_role;
+grant all on table public.promo_posts to service_role;
+
+-- Solo se pueden leer las publicaciones que aún NO cumplieron sus 15 días de vida
+drop policy if exists "promo_posts: lectura publica vigentes" on public.promo_posts;
+create policy "promo_posts: lectura publica vigentes" on public.promo_posts
+  for select to anon, authenticated
+  using (expires_at > now());
+
+-- Función SQL de limpieza automática de publicaciones vencidas (> 15 días)
+create or replace function public.cleanup_expired_promo_posts()
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  deleted_count int := 0;
+begin
+  with deleted as (
+    delete from public.promo_posts
+     where expires_at <= now()
+    returning id, storage_path
+  )
+  select count(*) into deleted_count from deleted;
+
+  return deleted_count;
+end;
+$$;
+
+-- Datos iniciales de ejemplo para el Menú Principal (/menu-principal)
+insert into public.promo_posts (
+  id, store_id, store_name, store_slug, store_whatsapp, store_logo_url,
+  image_url, caption, promo_price, badge_text, created_at, expires_at
+)
+values
+  (
+    'f0000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000001',
+    'Bar de Prueba',
+    'bar-de-prueba',
+    '5491123456789',
+    null,
+    'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1080&q=80',
+    '🔥 2x1 en Hamburguesa Doble Bacon + Papas Cheddar todos los Miércoles y Jueves. ¡Hacé tu pedido directo por WhatsApp!',
+    15900,
+    '2x1 BURGERS',
+    now() - interval '1 day',
+    now() + interval '14 days'
+  ),
+  (
+    'f0000000-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-000000000002',
+    'Bar de Prueba - Food Truck',
+    'bar-de-prueba-truck',
+    '5491123456789',
+    null,
+    'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1080&q=80',
+    '🍕 Promo Noche de Pizzas: 1 Napolitana Grande + 1 Muzzarella + 2 Pintas de IPA Artesanal Tirada.',
+    22500,
+    'COMBO AMIGOS',
+    now() - interval '2 days',
+    now() + interval '13 days'
+  )
+on conflict (id) do update
+  set caption = excluded.caption,
+      promo_price = excluded.promo_price,
+      badge_text = excluded.badge_text,
+      expires_at = excluded.expires_at;
 
 -- =============================================================================
 -- ¡FIN DEL SCRIPT! Todo configurado y blindado exitosamente.

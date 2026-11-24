@@ -16,7 +16,7 @@ type Props = { searchParams?: Record<string, string | string[] | undefined> };
 
 export default async function AdminPage({ searchParams }: Props) {
   // Modo demo para explorar el panel del dueño sin necesidad de login previo
-  const isDemo = searchParams?.demo === 'true';
+  const isDemo = searchParams?.demo === 'true' || searchParams?.demo === '1';
   if (isDemo) {
     const demoStore: Store = {
       id: 'demo-store',
@@ -78,6 +78,8 @@ export default async function AdminPage({ searchParams }: Props) {
         initialCategories={DEMO_CATEGORIES}
         initialProducts={DEMO_PRODUCTS}
         userId="demo-user"
+        userEmail="demo@cartaapp.com"
+        isSuperAdmin={true}
       />
     );
   }
@@ -91,6 +93,18 @@ export default async function AdminPage({ searchParams }: Props) {
   if (!user) {
     redirect('/login?next=/admin');
   }
+
+  const superAdminEnv = (
+    process.env.SUPER_ADMIN_EMAIL ||
+    process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL ||
+    ''
+  )
+    .trim()
+    .toLowerCase();
+
+  // Si SUPER_ADMIN_EMAIL está configurada, verificamos coincidencia exacta; si no está configurada aún, permitimos al dueño administrar el muro de promos
+  const isSuperAdmin =
+    !superAdminEnv || (user.email ? user.email.trim().toLowerCase() === superAdminEnv : false);
 
   // 1. Buscar todos los locales del dueño (local principal + sucursales/food trucks)
   const { data: storesData } = await supabase
@@ -134,6 +148,8 @@ export default async function AdminPage({ searchParams }: Props) {
       initialCategories={categories}
       initialProducts={products}
       userId={user.id}
+      userEmail={user.email ?? undefined}
+      isSuperAdmin={isSuperAdmin}
     />
   );
 }

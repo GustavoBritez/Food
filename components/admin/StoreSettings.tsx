@@ -37,7 +37,7 @@ import type {
   ThemeConfig,
 } from '@/lib/types';
 import { THEME_PRESETS, type ThemePreset } from '@/lib/theme-presets';
-import { DEFAULT_ACCENT, normalizeWhatsapp, SLUG_REGEX, slugify } from '@/lib/utils';
+import { DEFAULT_ACCENT, isReservedSlug, normalizeWhatsapp, SLUG_REGEX, slugify } from '@/lib/utils';
 
 type Props = {
   store: Store;
@@ -238,6 +238,10 @@ export function StoreSettings({
     }
     if (!SLUG_REGEX.test(cleanSlug)) {
       setError('El link público solo puede tener letras minúsculas, números y guiones (ej: mi-bar).');
+      return;
+    }
+    if (store.id !== 'demo-store' && store.id !== 'demo-truck' && isReservedSlug(cleanSlug)) {
+      setError(`El link "/p/${cleanSlug}" está reservado por el sistema. Elegí otro nombre.`);
       return;
     }
     if (!cleanWp || cleanWp.length < 8) {

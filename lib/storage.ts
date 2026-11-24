@@ -87,3 +87,12 @@ export async function removeImageByUrl(supabase: SupabaseClient, url: string | n
   const path = decodeURIComponent(url.slice(idx + marker.length).split('?')[0]);
   await supabase.storage.from(BUCKET).remove([path]).catch(() => undefined);
 }
+
+/** Extrae el storage_path interno de una URL pública del bucket "menus" */
+export function extractStoragePathFromUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const marker = `/storage/v1/object/public/${BUCKET}/`;
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  return decodeURIComponent(url.slice(idx + marker.length).split('?')[0]);
+}

@@ -120,4 +120,22 @@ export type PublicStore = Pick<
   current_period_end?: string | null;
 };
 
+/** Publicación del Menú Principal estilo Instagram (autodestruible a los 15 días) */
+export type PromoPost = {
+  id: string;
+  store_id: string | null;
+  store_name: string;
+  store_slug: string | null;
+  store_whatsapp: string;
+  store_logo_url: string | null;
+  image_url: string;
+  storage_path?: string | null;
+  caption: string;
+  promo_price?: number | null;
+  badge_text?: string | null;
+  created_at: string;
+  expires_at: string;
+};
+
+
 

@@ -324,7 +324,7 @@ export function EditorialView({ store, sections, actions, preview }: Props) {
                       <h2
                         className={cn(
                           'text-[20px] sm:text-[24px] tracking-wide',
-                          isHighlighted ? 'text-white' : 'text-ink',
+                          isHighlighted || isDark ? 'text-white' : 'text-ink',
                           FONT_TITLE_MAP[fontPair]
                         )}
                       >

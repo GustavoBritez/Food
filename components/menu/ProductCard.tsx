@@ -9,8 +9,8 @@ import { cn, formatPrice } from '@/lib/utils';
 type Props = {
   product: Product;
   qty: number;
-  onOrderAtTable: (p: Product) => void;
-  onOrderWhatsApp: (p: Product) => void;
+  onOrderAtTable: (p: Product, variant?: { label: string; price: number }) => void;
+  onOrderWhatsApp: (p: Product, variant?: { label: string; price: number }) => void;
   buttonStyle?: ButtonStyle;
   isDark?: boolean;
 };
@@ -28,6 +28,11 @@ export function ProductCard({
       {/* Contenido principal: texto a la izquierda, foto a la derecha */}
       <div className="flex items-start justify-between gap-3 min-w-0">
         <div className="min-w-0 flex-1">
+          {product.badge_label && (
+            <span className="mb-1 inline-block rounded-md bg-[var(--accent)]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--accent)]">
+              {product.badge_label}
+            </span>
+          )}
           <h3 className={cn('text-[16px] font-semibold leading-snug tracking-tight break-words', isDark ? 'text-white' : 'text-ink')}>
             {product.name}
           </h3>
@@ -60,9 +65,30 @@ export function ProductCard({
               {product.description}
             </p>
           )}
-          <p className={cn('mt-2 text-[15px] font-bold tabular-nums', isDark ? 'text-white' : 'text-ink')}>
-            {formatPrice(product.price)}
-          </p>
+          {product.price_variants && product.price_variants.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {product.price_variants.map((v) => (
+                <button
+                  key={v.label}
+                  type="button"
+                  onClick={() => onOrderAtTable(product, v)}
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11.5px] font-bold tabular-nums transition active:scale-95',
+                    isDark
+                      ? 'border-white/15 bg-white/5 text-white hover:border-[var(--accent)]'
+                      : 'border-black/10 bg-canvas text-ink hover:border-[var(--accent)]'
+                  )}
+                >
+                  <span className="opacity-75 font-medium">{v.label}:</span>
+                  <span>{formatPrice(v.price)}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className={cn('mt-2 text-[15px] font-bold tabular-nums', isDark ? 'text-white' : 'text-ink')}>
+              {formatPrice(product.price)}
+            </p>
+          )}
         </div>
 
         {product.photo_url && (

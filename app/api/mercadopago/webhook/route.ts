@@ -125,13 +125,29 @@ export async function POST(req: Request) {
         return NextResponse.json({ received: true, ignored: 'Amount/currency mismatch' }, { status: 200 });
       }
 
+      // Candado Atómico en Base de Datos (Evita Race Condition con /api/mercadopago/confirm y webhooks paralelos)
+      const { error: lockError } = await admin.from('mp_webhook_events').insert({
+        id: eventKey,
+        topic: plan === 'extra_branch' ? 'extra_branch.approved' : 'payment.approved',
+      });
+
+      if (lockError) {
+        if (lockError.code === '23505') {
+          return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
+        }
+        throw lockError;
+      }
+
       const { data: currentStore, error: fetchErr } = await admin
         .from('stores')
         .select('id, slug, mp_payment_id, subscription_status, current_period_end, extra_branches_purchased')
         .eq('id', storeId)
         .maybeSingle();
 
-      if (fetchErr) throw fetchErr;
+      if (fetchErr) {
+        await admin.from('mp_webhook_events').delete().eq('id', eventKey);
+        throw fetchErr;
+      }
       if (!currentStore) {
         return NextResponse.json({ received: true, ignored: 'Store not found' }, { status: 200 });
       }
@@ -146,18 +162,19 @@ export async function POST(req: Request) {
           })
           .eq('id', storeId);
 
-        if (updateErr) throw updateErr;
+        if (updateErr) {
+          await admin.from('mp_webhook_events').delete().eq('id', eventKey);
+          throw updateErr;
+        }
 
-        await admin.from('mp_webhook_events').insert({ id: eventKey, topic: 'extra_branch.approved' });
         return NextResponse.json({ received: true, status: 'extra_branch_activated' }, { status: 200 });
       }
 
-      // Si ya fue procesado por /api/mercadopago/confirm, registramos idempotencia y salimos sin duplicar días
+      // Si ya fue procesado por /api/mercadopago/confirm, salimos sin duplicar días
       if (
         currentStore.mp_payment_id === String(payment.id) &&
         currentStore.subscription_status === 'active'
       ) {
-        await admin.from('mp_webhook_events').insert({ id: eventKey, topic: 'payment.approved' });
         return NextResponse.json({ received: true, alreadyProcessed: true }, { status: 200 });
       }
 
@@ -179,10 +196,10 @@ export async function POST(req: Request) {
         })
         .eq('id', storeId);
 
-      if (updateErr) throw updateErr;
-
-      // Registramos idempotencia SOLO tras confirmar que la base de datos se actualizó con éxito
-      await admin.from('mp_webhook_events').insert({ id: eventKey, topic: 'payment.approved' });
+      if (updateErr) {
+        await admin.from('mp_webhook_events').delete().eq('id', eventKey);
+        throw updateErr;
+      }
 
       try {
         revalidatePath(`/p/${currentStore.slug}`);
@@ -193,8 +210,42 @@ export async function POST(req: Request) {
       return NextResponse.json({ received: true, status: 'activated' }, { status: 200 });
     }
 
-    // 6. CASO B: Reembolso o Contracargo (Anti-Fraude) -> Suspender inmediatamente el local
+    // 6. CASO B: Reembolso o Contracargo (Anti-Fraude) -> Suspender inmediatamente el local o descontar cupo extra
     if (paymentStatus === 'refunded' || paymentStatus === 'charged_back') {
+      const { error: lockError } = await admin.from('mp_webhook_events').insert({
+        id: eventKey,
+        topic: `payment.${paymentStatus}`,
+      });
+
+      if (lockError) {
+        if (lockError.code === '23505') {
+          return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
+        }
+        throw lockError;
+      }
+
+      if (plan === 'extra_branch') {
+        const { data: currentStore } = await admin
+          .from('stores')
+          .select('extra_branches_purchased')
+          .eq('id', storeId)
+          .maybeSingle();
+
+        if (currentStore) {
+          const prevExtra = Math.max(0, (currentStore.extra_branches_purchased || 0) - 1);
+          const { error: revExtraErr } = await admin
+            .from('stores')
+            .update({ extra_branches_purchased: prevExtra })
+            .eq('id', storeId);
+
+          if (revExtraErr) {
+            await admin.from('mp_webhook_events').delete().eq('id', eventKey);
+            throw revExtraErr;
+          }
+        }
+        return NextResponse.json({ received: true, status: 'extra_branch_revoked' }, { status: 200 });
+      }
+
       const { data: revokedStore, error: revokeErr } = await admin
         .from('stores')
         .update({
@@ -206,9 +257,10 @@ export async function POST(req: Request) {
         .select('slug')
         .maybeSingle();
 
-      if (revokeErr) throw revokeErr;
-
-      await admin.from('mp_webhook_events').insert({ id: eventKey, topic: `payment.${paymentStatus}` });
+      if (revokeErr) {
+        await admin.from('mp_webhook_events').delete().eq('id', eventKey);
+        throw revokeErr;
+      }
 
       if (revokedStore?.slug) {
         try {

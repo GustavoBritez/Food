@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { Camera, Film, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Sheet } from '@/components/ui/Sheet';
-import { uploadImage, uploadVideo } from '@/lib/storage';
+import { removeImageByUrl, uploadImage, uploadVideo } from '@/lib/storage';
 import { createClient } from '@/lib/supabase/client';
 import type { Category, PriceVariant, Product, ProductBadge } from '@/lib/types';
 
@@ -13,6 +13,7 @@ type Props = {
   onClose: () => void;
   product?: Product | null;
   categories: Category[];
+  defaultCategoryId?: string | null;
   storeId: string;
   userId: string;
   onSave: (prod: Partial<Product> & { id?: string }) => Promise<void>;
@@ -24,6 +25,7 @@ export function ProductModal({
   onClose,
   product,
   categories,
+  defaultCategoryId,
   storeId,
   userId,
   onSave,
@@ -66,7 +68,9 @@ export function ProductModal({
       setName('');
       setDescription('');
       setPrice('');
-      const defaultCat = categories[0];
+      const defaultCat =
+        (defaultCategoryId && categories.find((c) => c.id === defaultCategoryId)) ||
+        categories[0];
       setCategoryId(defaultCat?.id ?? '');
       setBadgeLabel('');
       // Si la categoría por defecto tiene columnas de precio, inicializarlas
@@ -82,7 +86,7 @@ export function ProductModal({
       setOrder(nextOrder);
     }
     setError('');
-  }, [product, categories, nextOrder, open]);
+  }, [product, categories, defaultCategoryId, nextOrder, open]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -92,7 +96,12 @@ export function ProductModal({
       setUploading(true);
       setError('');
       const supabase = createClient();
+      const prevPhoto = photoUrl;
       const url = await uploadImage(supabase, userId, file);
+      // Si había subido una foto temporal en esta misma sesión sin guardar aún, la limpiamos
+      if (prevPhoto && prevPhoto !== product?.photo_url) {
+        removeImageByUrl(supabase, prevPhoto);
+      }
       setPhotoUrl(url);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'No se pudo subir la foto.');
@@ -110,7 +119,11 @@ export function ProductModal({
       setUploadingVideo(true);
       setError('');
       const supabase = createClient();
+      const prevVideo = videoUrl;
       const url = await uploadVideo(supabase, userId, file);
+      if (prevVideo && prevVideo !== product?.video_url) {
+        removeImageByUrl(supabase, prevVideo);
+      }
       setVideoUrl(url);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'No se pudo subir el video.');
@@ -493,7 +506,11 @@ export function ProductModal({
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <div className="pt-2">
-          <button type="submit" className="btn-primary h-12 w-full" disabled={saving || uploading}>
+          <button
+            type="submit"
+            className="btn-primary h-12 w-full"
+            disabled={saving || uploading || uploadingVideo}
+          >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Guardar producto'}
           </button>
         </div>

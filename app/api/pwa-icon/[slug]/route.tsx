@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
-import { NextRequest, NextResponse } from 'next/server';
-import { DEMO_SLUG, DEMO_STORE } from '@/lib/demo';
+import { NextRequest } from 'next/server';
+import { DEMO_BRANCH_SLUG, DEMO_BRANCH_STORE, DEMO_SLUG, DEMO_STORE } from '@/lib/demo';
 import { createPublicClient } from '@/lib/supabase/public';
 
 export const runtime = 'edge';
@@ -22,6 +22,10 @@ export async function GET(
     name = DEMO_STORE.name;
     logoUrl = DEMO_STORE.logo_url;
     accentColor = DEMO_STORE.accent_color || '#22c55e';
+  } else if (cleanSlug === DEMO_BRANCH_SLUG) {
+    name = DEMO_BRANCH_STORE.name;
+    logoUrl = DEMO_BRANCH_STORE.logo_url;
+    accentColor = DEMO_BRANCH_STORE.accent_color || '#f97316';
   } else {
     try {
       const supabase = createPublicClient();
@@ -41,9 +45,10 @@ export async function GET(
     }
   }
 
-  if (logoUrl) {
-    return NextResponse.redirect(logoUrl, 307);
-  }
+  // Si el logo es WebP, ImageResponse de Satori puede no decodificarlo directamente;
+  // en ese caso usamos el ícono vectorial del local con su color de marca para garantizar un PNG válido 192/512
+  const canRenderLogoInOg =
+    logoUrl && !logoUrl.toLowerCase().endsWith('.webp');
 
   return new ImageResponse(
     (
@@ -54,11 +59,11 @@ export async function GET(
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: logoUrl ? accentColor : '#18181b',
+          backgroundColor: canRenderLogoInOg ? accentColor : '#18181b',
           overflow: 'hidden',
         }}
       >
-        {logoUrl ? (
+        {canRenderLogoInOg && logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={logoUrl}

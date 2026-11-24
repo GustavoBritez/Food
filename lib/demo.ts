@@ -1,4 +1,4 @@
-import type { Category, Product, PublicStore } from './types';
+import type { Category, Product, PromoPost, PublicStore } from './types';
 
 /**
  * Restaurante de prueba que vive en el código (no necesita Supabase).
@@ -143,3 +143,49 @@ export const DEMO_PRODUCTS: Product[] = ROWS.map(([cat, name, description, price
     order,
   };
 });
+
+export const DEMO_PROMO_POSTS: PromoPost[] = [
+  {
+    id: 'demo-promo-1',
+    store_id: 'demo-store',
+    store_name: 'Restaurante de Prueba',
+    store_slug: 'demo',
+    store_whatsapp: '5491128989237',
+    store_logo_url: null,
+    image_url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1080&q=80',
+    caption: '🔥 2x1 en Burger Doble Cheddar + Papas Rústicas todos los Miércoles y Jueves de 19 a 23 hs. ¡Pedila ahora por WhatsApp o vení al local!',
+    promo_price: 14900,
+    badge_text: '2x1 BURGERS',
+    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    expires_at: new Date(Date.now() + 13 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'demo-promo-2',
+    store_id: 'demo-truck',
+    store_name: 'Food Truck Plaza',
+    store_slug: 'demo-truck',
+    store_whatsapp: '5491128989237',
+    store_logo_url: null,
+    image_url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1080&q=80',
+    caption: '🍕 Combo Amigos: 1 Pizza Napolitana a la Piedra + 1 Pizza Muzzarella + 2 Pintas de IPA Artesanal bien heladas.',
+    promo_price: 23500,
+    badge_text: 'COMBO AMIGOS',
+    created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    expires_at: new Date(Date.now() + 11 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'demo-promo-3',
+    store_id: 'demo-store',
+    store_name: 'Restaurante de Prueba',
+    store_slug: 'demo',
+    store_whatsapp: '5491128989237',
+    store_logo_url: null,
+    image_url: 'https://images.unsplash.com/photo-1452195100486-9cc805987862?auto=format&fit=crop&w=1080&q=80',
+    caption: '🧀 Tabla de Quesos, Jamón Crudo Reserva y Pan de Masa Madre para 3 personas + 2 Gin Tonics de Autor.',
+    promo_price: 21800,
+    badge_text: 'HAPPY HOUR',
+    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+];
+

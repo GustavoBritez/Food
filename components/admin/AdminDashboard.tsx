@@ -10,6 +10,7 @@ import {
   Eye,
   EyeOff,
   FileText,
+  Flame,
   LogOut,
   Pencil,
   Plus,
@@ -26,6 +27,7 @@ import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 import { BranchModal } from './BranchModal';
 import { CategoryModal } from './CategoryModal';
 import { ProductModal } from './ProductModal';
+import { PromoFeedManager } from './PromoFeedManager';
 import { QrModal } from './QrModal';
 import { StoreSettings } from './StoreSettings';
 import { SubscriptionBanner } from './SubscriptionBanner';
@@ -40,6 +42,8 @@ type Props = {
   initialCategories: Category[];
   initialProducts: Product[];
   userId: string;
+  userEmail?: string;
+  isSuperAdmin?: boolean;
 };
 
 export function AdminDashboard({
@@ -48,6 +52,7 @@ export function AdminDashboard({
   initialCategories,
   initialProducts,
   userId,
+  isSuperAdmin = false,
 }: Props) {
   // Lista de locales del dueño (local principal + sucursales/food trucks)
   const [stores, setStores] = useState<Store[]>(
@@ -76,9 +81,10 @@ export function AdminDashboard({
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [prodModalOpen, setProdModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [defaultCategoryId, setDefaultCategoryId] = useState<string | null>(null);
 
   // Tabs / Vistas y borrador de previsualización en vivo
-  const [activeTab, setActiveTab] = useState<'menu' | 'settings'>('menu');
+  const [activeTab, setActiveTab] = useState<'menu' | 'settings' | 'promos'>('menu');
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
   const [previewDraft, setPreviewDraft] = useState<Partial<Store>>({});
 
@@ -302,6 +308,8 @@ export function AdminDashboard({
           video_url: data.video_url ?? null,
           available: data.available ?? true,
           badges: data.badges ?? [],
+          badge_label: data.badge_label ?? null,
+          price_variants: data.price_variants ?? [],
           excluded_store_ids: [],
           order: data.order ?? products.length,
         };
@@ -345,6 +353,8 @@ export function AdminDashboard({
           video_url: data.video_url ?? null,
           available: data.available ?? true,
           badges: data.badges ?? [],
+          badge_label: data.badge_label ?? null,
+          price_variants: data.price_variants ?? [],
           order: data.order ?? 0,
         })
         .select()
@@ -381,6 +391,10 @@ export function AdminDashboard({
 
   async function handleDeleteProduct(prodId: string) {
     if (!confirm('¿Eliminar este producto?')) return;
+    if (mainStore.id === 'demo-store' || userId === 'demo-user') {
+      setProducts((prev) => prev.filter((p) => p.id !== prodId));
+      return;
+    }
     const prod = products.find((p) => p.id === prodId);
     const { error } = await supabase.from('products').delete().eq('id', prodId);
     if (error) {
@@ -508,7 +522,7 @@ export function AdminDashboard({
       {/* Barra de Subnavegación del Admin + Selector de Sucursal */}
       <div className="border-b border-black/[0.06] bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6">
-          <nav className="flex gap-1 py-1">
+          <nav className="flex flex-wrap gap-1 py-1">
             <button
               type="button"
               onClick={() => setActiveTab('menu')}
@@ -527,6 +541,19 @@ export function AdminDashboard({
             >
               <Settings className="h-4 w-4" /> {isBranch ? `Datos de ${activeStore.name}` : 'Datos del Local'}
             </button>
+            {isSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('promos')}
+                className={`btn h-9 px-4 text-[13.5px] ${
+                  activeTab === 'promos'
+                    ? 'bg-gradient-to-r from-amber-500 via-rose-500 to-fuchsia-600 text-white shadow-sm'
+                    : 'text-rose-600 hover:bg-rose-50'
+                }`}
+              >
+                <Flame className="h-4 w-4" /> Muro de Promos (15d)
+              </button>
+            )}
           </nav>
 
           {/* Selector de Sucursal / Food Truck */}
@@ -585,7 +612,13 @@ export function AdminDashboard({
               showPreviewMobile ? 'hidden lg:block' : 'block'
             } lg:col-span-7 xl:col-span-7`}
           >
-            {activeTab === 'settings' ? (
+            {activeTab === 'promos' && isSuperAdmin ? (
+              <PromoFeedManager
+                stores={stores}
+                userId={userId}
+                isDemo={mainStore.id === 'demo-store' || userId === 'demo-user'}
+              />
+            ) : activeTab === 'settings' ? (
               <StoreSettings
                 store={activeStore}
                 userId={userId}
@@ -688,6 +721,7 @@ export function AdminDashboard({
                           return;
                         }
                         setEditingProduct(null);
+                        setDefaultCategoryId(null);
                         setProdModalOpen(true);
                       }}
                       className="btn-primary h-10 px-3.5 text-[13px]"
@@ -746,8 +780,18 @@ export function AdminDashboard({
                               <button
                                 type="button"
                                 onClick={() => {
+                                  const isSubscribed =
+                                    mainStore.id === 'demo-store' ||
+                                    mainStore.subscription_status === 'active' ||
+                                    mainStore.subscription_status === 'trialing';
+                                  if (!isSubscribed) {
+                                    alert(
+                                      'Debes activar tu mes gratis o suscribirte con Mercado Pago para agregar platos.'
+                                    );
+                                    return;
+                                  }
                                   setEditingProduct(null);
-                                  // Pre-selecciona esta categoría
+                                  setDefaultCategoryId(category.id);
                                   setProdModalOpen(true);
                                 }}
                                 className="icon-btn h-8 w-8 hover:text-ink"
@@ -1032,6 +1076,7 @@ export function AdminDashboard({
         onClose={() => setProdModalOpen(false)}
         product={editingProduct}
         categories={categories}
+        defaultCategoryId={defaultCategoryId}
         storeId={mainStore.id}
         userId={userId}
         onSave={handleSaveProduct}

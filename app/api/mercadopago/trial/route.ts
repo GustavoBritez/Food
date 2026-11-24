@@ -19,6 +19,7 @@ export async function POST() {
       .from('stores')
       .select('id, name, slug, whatsapp, subscription_status, trial_end, current_period_end')
       .eq('created_by', user.id)
+      .is('parent_store_id', null)
       .maybeSingle();
 
     if (storeError || !store) {

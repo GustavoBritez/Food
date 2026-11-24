@@ -236,7 +236,9 @@ export function ListView({ store, sections, actions, preview }: Props) {
           )}>
             Precios sujetos a modificación por el comercio. No procesamos pagos.
             <br />
-            <span className="font-medium text-black/50">Menú creado con Carta App</span>
+            <span className={cn('font-medium', isDark ? 'text-white/50' : 'text-black/50')}>
+              Menú creado con Carta App
+            </span>
           </footer>
         </main>
       </div>

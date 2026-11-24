@@ -11,6 +11,8 @@ type Props = {
   initialCategories: Category[];
   initialProducts: Product[];
   userId: string;
+  userEmail?: string;
+  isSuperAdmin?: boolean;
 };
 
 export function AdminClientWrapper({
@@ -19,6 +21,8 @@ export function AdminClientWrapper({
   initialCategories,
   initialProducts,
   userId,
+  userEmail,
+  isSuperAdmin = false,
 }: Props) {
   const [store, setStore] = useState<Store | null>(initialStore);
   const [stores, setStores] = useState<Store[]>(initialStores || (initialStore ? [initialStore] : []));
@@ -47,6 +51,8 @@ export function AdminClientWrapper({
       initialCategories={categories}
       initialProducts={initialProducts}
       userId={userId}
+      userEmail={userEmail}
+      isSuperAdmin={isSuperAdmin}
     />
   );
 }

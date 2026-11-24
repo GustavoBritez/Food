@@ -158,15 +158,9 @@ export function PwaInstallButton({
       }
     }
 
-    // 2. En iOS Safari (donde Apple WebKit no soporta beforeinstallprompt) o navegador in-app (WhatsApp/Instagram):
-    // Mostrar asistencia amigable
-    if (platform.isIOS || platform.isInApp) {
-      setModalOpen(true);
-      return;
-    }
-
-    // 3. En Android / Google Chrome: SIN MODAL NI PASOS EN PANTALLA.
-    // El usuario pidió expresamente: "simplemente hacerle click ya debe iniciar la descarga en chrome".
+    // 2. Si el navegador no disparó beforeinstallprompt (ej. iOS Safari, navegador in-app WhatsApp/Instagram, o Chrome ya instalado/sin prompt):
+    // Mostramos la guía interactiva de instalación
+    setModalOpen(true);
   };
 
   const baseStyles =

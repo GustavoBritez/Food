@@ -49,10 +49,14 @@ export function QrModal({ open, onClose, store }: Props) {
     // Dibujar el QR escalado
     ctx.drawImage(canvas, padding, padding, size - padding * 2, size - padding * 2);
 
-    const a = document.createElement('a');
-    a.download = `cartaapp-${store.slug}.png`;
-    a.href = exportCanvas.toDataURL('image/png');
-    a.click();
+    try {
+      const a = document.createElement('a');
+      a.download = `cartaapp-${store.slug}.png`;
+      a.href = exportCanvas.toDataURL('image/png');
+      a.click();
+    } catch {
+      alert('No se pudo exportar el logo externo por restricciones CORS del servidor de la imagen. Quitá o volvé a subir el logo desde tu computadora.');
+    }
   }
 
   return (
@@ -88,6 +92,7 @@ export function QrModal({ open, onClose, store }: Props) {
               height: 48,
               width: 48,
               excavate: true,
+              crossOrigin: 'anonymous',
             }}
           />
         </div>
