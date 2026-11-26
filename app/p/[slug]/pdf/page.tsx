@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import Link from 'next/link';
+import { Flame } from 'lucide-react';
 import { ClocheIcon } from '@/components/ClocheIcon';
 import {
   DEMO_BRANCH_SLUG,
@@ -120,6 +122,13 @@ export default async function StorePdfPage({ params }: Params) {
             El servicio digital de este local se encuentra momentáneamente pausado.
           </p>
         </div>
+        <Link
+          href="/menu-principal"
+          className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-[13.5px] font-bold text-neutral-950 shadow-lg transition hover:bg-neutral-100 active:scale-[0.96]"
+        >
+          <Flame className="h-4 w-4 text-rose-500 fill-current" />
+          <span>Ir al Menú Principal</span>
+        </Link>
       </main>
     );
   }

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Flame } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 
 export default function MenuNotFound() {
@@ -9,9 +10,15 @@ export default function MenuNotFound() {
       <p className="mt-2 max-w-sm text-[15px] text-muted">
         Puede que el link esté mal escrito o que el comercio haya cambiado su dirección.
       </p>
-      <Link href="/" className="btn-secondary mt-8 bg-white">
-        <Logo />
-      </Link>
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <Link href="/menu-principal" className="btn-primary">
+          <Flame className="h-4 w-4 text-rose-400 fill-current" />
+          <span>Ir al Menú Principal</span>
+        </Link>
+        <Link href="/" className="btn-secondary bg-white">
+          <Logo />
+        </Link>
+      </div>
     </main>
   );
 }
