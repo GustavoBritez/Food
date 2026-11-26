@@ -28,15 +28,13 @@ export function MainMenuFloatingButton({ storeSlug, hasCartItems, preview = fals
     >
       <Link
         href={`/menu-principal?from=${encodeURIComponent(storeSlug)}`}
-        className="pointer-events-auto group inline-flex items-center gap-2 rounded-full p-[1.5px] bg-gradient-to-r from-amber-400 via-rose-500 to-fuchsia-600 shadow-xl shadow-black/40 transition-transform duration-200 hover:scale-105 active:scale-95"
-        title="Ir al Menú Principal de Promociones"
+        className="pointer-events-auto group inline-flex items-center gap-2 rounded-full border border-white/15 bg-neutral-950/90 px-4 py-2 text-[12.5px] font-semibold text-white shadow-2xl shadow-black/50 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-200 hover:scale-[1.03] hover:bg-neutral-900 active:scale-[0.96]"
+        title="Explorar bares, food trucks y promos en el Menú Principal"
       >
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-950/95 px-3.5 py-1.5 text-[12px] font-bold text-white backdrop-blur-md">
-          <span className="grid h-5 w-5 place-items-center rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-fuchsia-600 text-white shadow-xs">
-            <Flame className="h-3 w-3 fill-current" />
-          </span>
-          <span>Menú Principal · Promos</span>
+        <span className="grid h-5 w-5 place-items-center rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-fuchsia-600 text-white shadow-xs">
+          <Flame className="h-3 w-3 fill-current" />
         </span>
+        <span>Menú Principal · Locales y Promos</span>
       </Link>
     </div>
   );

@@ -83,6 +83,8 @@ export function StoreSettings({
 }: Props) {
   const [name, setName] = useState(store.name);
   const [tagline, setTagline] = useState(store.tagline ?? '');
+  const [location, setLocation] = useState(store.location ?? '');
+  const [categoryTag, setCategoryTag] = useState(store.category_tag ?? 'Restaurante');
   const [slug, setSlug] = useState(store.slug);
   const [whatsapp, setWhatsapp] = useState(store.whatsapp);
   const [logoUrl, setLogoUrl] = useState<string | null>(store.logo_url);
@@ -128,6 +130,8 @@ export function StoreSettings({
   useEffect(() => {
     setName(store.name);
     setTagline(store.tagline ?? '');
+    setLocation(store.location ?? '');
+    setCategoryTag(store.category_tag ?? 'Restaurante');
     setSlug(store.slug);
     setWhatsapp(store.whatsapp);
     setLogoUrl(store.logo_url);
@@ -146,6 +150,8 @@ export function StoreSettings({
     onPreviewDraft?.({
       name,
       tagline: tagline.trim() || null,
+      location: location.trim() || null,
+      category_tag: categoryTag || null,
       slug,
       whatsapp,
       logo_url: logoUrl,
@@ -160,6 +166,8 @@ export function StoreSettings({
   }, [
     name,
     tagline,
+    location,
+    categoryTag,
     slug,
     whatsapp,
     logoUrl,
@@ -279,6 +287,8 @@ export function StoreSettings({
       const payload: Record<string, unknown> = {
         name: cleanName,
         tagline: tagline.trim() || null,
+        location: location.trim() || null,
+        category_tag: categoryTag || null,
         slug: cleanSlug,
         whatsapp: cleanWp,
         logo_url: logoUrl,
@@ -981,6 +991,45 @@ export function StoreSettings({
               onChange={(e) => setTagline(e.target.value)}
               className="input"
             />
+          </div>
+        </div>
+
+        {/* Ubicación y Rubro (para filtrar en el Menú Principal) */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="store-location" className="label">
+              Ubicación / Barrio / Ciudad (para el buscador)
+            </label>
+            <input
+              id="store-location"
+              type="text"
+              maxLength={80}
+              placeholder="Ej: Palermo, CABA · Costanera · Lanús Este"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="input"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="store-category-tag" className="label">
+              Rubro principal del local
+            </label>
+            <select
+              id="store-category-tag"
+              value={categoryTag}
+              onChange={(e) => setCategoryTag(e.target.value)}
+              className="input font-medium"
+            >
+              <option value="Restaurante">🍽️ Restaurante</option>
+              <option value="Hamburguesas">🍔 Hamburguesas</option>
+              <option value="Pizzas">🍕 Pizzas</option>
+              <option value="Cervecerías">🍺 Cervecerías / Bar</option>
+              <option value="Food Trucks">🚚 Food Truck</option>
+              <option value="Cafeterías">☕ Cafeterías / Brunch</option>
+              <option value="Postres">🍰 Postres / Heladerías</option>
+              <option value="Saludable">🥗 Saludable / Bowls</option>
+            </select>
           </div>
         </div>
 

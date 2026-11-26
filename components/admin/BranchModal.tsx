@@ -29,6 +29,7 @@ export function BranchModal({
 }: Props) {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
+  const [location, setLocation] = useState('');
   const [whatsapp, setWhatsapp] = useState(mainStore.whatsapp || '');
   const [loading, setLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -148,6 +149,8 @@ export function BranchModal({
           logo_url: mainStore.logo_url,
           cover_url: mainStore.cover_url,
           tagline: `Sucursal · ${cleanName}`,
+          location: location.trim() || mainStore.location || null,
+          category_tag: 'Food Trucks',
           accent_color: mainStore.accent_color,
           layout: mainStore.layout,
           theme: mainStore.theme,
@@ -313,6 +316,21 @@ export function BranchModal({
           <p className="mt-1 text-[12px] text-subtle">
             Tendrá su propio código QR para colocar en el food truck o las mesas de esta sucursal.
           </p>
+        </div>
+
+        <div>
+          <label htmlFor="branch-location" className="label">
+            Ubicación / Zona de este punto (opcional)
+          </label>
+          <input
+            id="branch-location"
+            type="text"
+            maxLength={80}
+            placeholder="Ej: Costanera Norte, Plaza Serrano, Lanús"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            className="input"
+          />
         </div>
 
         <div>

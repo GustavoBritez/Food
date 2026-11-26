@@ -67,6 +67,8 @@ alter table public.stores add column if not exists mp_payment_id text;
 alter table public.stores add column if not exists mp_preference_id text;
 alter table public.stores add column if not exists mp_merchant_order_id text;
 alter table public.stores add column if not exists extra_branches_purchased int not null default 0;
+alter table public.stores add column if not exists location text check (location is null or char_length(location) <= 80);
+alter table public.stores add column if not exists category_tag text check (category_tag is null or char_length(category_tag) <= 40);
 alter table public.stores drop constraint if exists stores_layout_check;
 update public.stores set layout = 'feed' where layout not in ('feed', 'list', 'grid', 'editorial');
 alter table public.stores add constraint stores_layout_check check (layout in ('feed', 'list', 'grid', 'editorial'));
@@ -333,6 +335,7 @@ revoke select on table public.stores from anon;
 
 grant select (
   id, name, slug, whatsapp, logo_url, cover_url, tagline,
+  location, category_tag,
   accent_color, layout, theme, bg_color, button_style,
   theme_config, subscription_status, current_period_end,
   parent_store_id

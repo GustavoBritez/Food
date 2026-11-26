@@ -18,26 +18,29 @@ body {
 
 @layer components {
   .btn {
-    @apply inline-flex select-none items-center justify-center gap-2 rounded-full font-medium transition
-      active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-full font-medium tracking-[-0.01em] transition-all duration-150
+      active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn h-11 bg-ink px-5 text-[15px] text-white hover:bg-black;
+    @apply btn h-11 bg-ink px-5 text-[15px] font-semibold text-white shadow-sm hover:bg-black;
   }
   .btn-secondary {
-    @apply btn h-11 bg-canvas px-5 text-[15px] text-ink hover:bg-black/[0.07];
+    @apply btn h-11 bg-canvas px-5 text-[15px] font-medium text-ink ring-1 ring-black/[0.06] hover:bg-black/[0.07];
   }
   .btn-whatsapp {
-    @apply btn h-11 bg-whatsapp px-5 text-[15px] text-white hover:brightness-95;
+    @apply btn h-11 bg-whatsapp px-5 text-[15px] font-semibold text-white shadow-sm hover:brightness-95;
   }
   .btn-ghost {
-    @apply btn h-9 px-3 text-sm text-muted hover:bg-canvas hover:text-ink;
+    @apply btn h-9 px-3.5 text-sm text-muted hover:bg-canvas hover:text-ink;
+  }
+  .btn-apple-pill {
+    @apply inline-flex select-none items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[0.08] px-4 py-2 text-[13px] font-semibold text-white backdrop-blur-xl transition-all duration-150 hover:bg-white/[0.14] active:scale-[0.96];
   }
   .icon-btn {
-    @apply inline-grid h-9 w-9 place-items-center rounded-full text-muted transition hover:bg-canvas hover:text-ink active:scale-95 disabled:opacity-40;
+    @apply inline-grid h-9 w-9 place-items-center rounded-full text-muted transition-all duration-150 hover:bg-canvas hover:text-ink active:scale-95 disabled:opacity-40;
   }
   .glass-btn {
-    @apply inline-grid h-9 w-9 place-items-center rounded-full bg-black/40 text-white backdrop-blur-md transition hover:bg-black/60 active:scale-95 disabled:opacity-40;
+    @apply inline-grid h-9 w-9 place-items-center rounded-full bg-black/40 text-white backdrop-blur-xl ring-1 ring-white/15 transition-all duration-150 hover:bg-black/60 active:scale-95 disabled:opacity-40;
   }
   .input {
     @apply h-11 w-full rounded-xl border border-black/10 bg-white px-3.5 text-[15px] text-ink outline-none transition

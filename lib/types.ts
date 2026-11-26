@@ -34,6 +34,10 @@ export type Store = {
   created_by: string | null;
   /** Frase corta debajo del nombre (ej: "Pizzas a la piedra · Palermo") */
   tagline: string | null;
+  /** Ubicación / Barrio / Ciudad para filtrar en el Menú Principal (ej: "Palermo, CABA") */
+  location?: string | null;
+  /** Rubro principal del local (ej: "Hamburguesas", "Pizzas", "Cervecerías", "Food Trucks") */
+  category_tag?: string | null;
   /** Color de marca en HEX (#22c55e) */
   accent_color: string;
   /** Estilo del menú público: feed, list, grid o editorial */
@@ -105,6 +109,8 @@ export type PublicStore = Pick<
   | 'logo_url'
   | 'cover_url'
   | 'tagline'
+  | 'location'
+  | 'category_tag'
   | 'accent_color'
   | 'layout'
   | 'theme'
@@ -135,6 +141,17 @@ export type PromoPost = {
   badge_text?: string | null;
   created_at: string;
   expires_at: string;
+};
+
+/** Local o Food Truck mostrado en el Directorio del Menú Principal (/menu-principal) */
+export type DirectoryStore = PublicStore & {
+  is_branch: boolean;
+  has_promos: boolean;
+  featured_products: Array<{
+    id: string;
+    name: string;
+    price: number;
+  }>;
 };
 
 
